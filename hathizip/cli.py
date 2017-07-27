@@ -7,7 +7,17 @@ from hathizip import process, configure_logging
 from hathizip.utils import has_subdirs
 
 
-def get_parser()->argparse.ArgumentParser:
+def destination_path(path):
+    if not os.path.exists(path):
+        raise ValueError("{} is an invalid path".format(path))
+
+    if not os.path.isdir(path):
+        raise ValueError("{} is not a path".format(path))
+
+    return os.path.abspath(path)
+
+
+def get_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=hathizip.__description__)
 
     parser.add_argument(
@@ -22,6 +32,7 @@ def get_parser()->argparse.ArgumentParser:
     )
     parser.add_argument(
         "--dest",
+        type=destination_path,
         help="Alternative path to save the newly created HathiTrust zipped package for submission"
     )
     parser.add_argument(
