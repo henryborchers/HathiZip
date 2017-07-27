@@ -1,15 +1,20 @@
 from setuptools import setup
-import hathizip
+import os
+
+metadata = dict()
+metadata_file = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'hathizip', '__version__.py')
+with open(metadata_file, 'r', encoding='utf-8') as f:
+    exec(f.read(), metadata)
 
 setup(
-    name=hathizip.__title__,
-    version=hathizip.__version__,
+    name=metadata["__title__"],
+    version=metadata["__version__"],
     packages=['hathizip'],
-    url=hathizip.__url__,
+    url=metadata["__url__"],
     license='University of Illinois/NCSA Open Source License',
-    author=hathizip.__author__,
-    author_email=hathizip.__author_email__,
-    description=hathizip.__description__,
+    author=metadata["__author__"],
+    author_email=metadata["__author_email__"],
+    description=metadata["__description__"],
     test_suite="tests",
     setup_requires=['pytest-runner'],
     tests_require=['pytest'],
