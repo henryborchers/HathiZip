@@ -1,5 +1,6 @@
 from setuptools import setup
 import os
+
 metadata = dict()
 metadata_file = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'hathizip', '__version__.py')
 with open(metadata_file, 'r', encoding='utf-8') as f:
