@@ -21,6 +21,10 @@ def get_parser()->argparse.ArgumentParser:
         help="Path to the HathiTrust folders to be zipped"
     )
     parser.add_argument(
+        "--dest",
+        help="Alternative path to save the newly created HathiTrust zipped package for submission"
+    )
+    parser.add_argument(
         "--remove",
         action="store_true",
         help="Remove original files after successfully zipped"
@@ -40,11 +44,19 @@ def get_parser()->argparse.ArgumentParser:
 def main():
     parser = get_parser()
     args = parser.parse_args()
+
+    if args.dest:
+        # If an alternative destination path for the zip files is asked for, use that.
+        destination_path = args.dest
+    else:
+        # Otherwise just put the newly created zip files in the same path
+        destination_path = args.path
+
     logger = configure_logging.configure_logger(debug_mode=args.debug, log_file=args.log_debug)
     if not has_subdirs(args.path):
         logger.error("No directories found at {}".format(args.path))
     for folder in filter(lambda x: x.is_dir(), os.scandir(args.path)):
-        process.compress_folder(folder.path, dst=args.path)
+        process.compress_folder(folder.path, dst=destination_path)
         if args.remove:
             shutil.rmtree(folder.path)
             logger.info("Removing {}.".format(folder.path))
