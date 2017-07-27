@@ -2,9 +2,12 @@ import os
 import sys
 import cx_Freeze
 import pytest
-import hathizip
 import platform
 
+metadata = dict()
+metadata_file = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'hathizip', '__version__.py')
+with open(metadata_file, 'r', encoding='utf-8') as f:
+    exec(f.read(), metadata)
 
 
 def create_msi_tablename(python_name, fullname):
@@ -39,14 +42,14 @@ directory_table = [
     (
         "PMenu",  # Directory
         "ProgramMenuFolder",  # Directory_parent
-        create_msi_tablename(hathizip.__title__, hathizip.FULL_TITLE)
+        create_msi_tablename(metadata["__title__"], metadata["FULL_TITLE"])
     ),
 ]
 shortcut_table = [
     (
         "startmenuShortcutDoc",  # Shortcut
         "PMenu",  # Directory_
-        "{} Documentation".format(create_msi_tablename(hathizip.__title__, hathizip.FULL_TITLE)),
+        "{} Documentation".format(create_msi_tablename(metadata["__title__"], metadata["FULL_TITLE"])),
         "TARGETDIR",  # Component_
         "[TARGETDIR]documentation.url",  # Target
         None,  # Arguments
@@ -82,12 +85,12 @@ build_exe_options = {
 
 target_name = "hathizip.exe" if platform.system() == "Windows" else "hathizip"
 cx_Freeze.setup(
-    name=hathizip.FULL_TITLE,
-    description=hathizip.__description__,
+    name=metadata["FULL_TITLE"],
+    description=metadata["__description__"],
     license="University of Illinois/NCSA Open Source License",
-    version=hathizip.__version__,
-    author=hathizip.__author__,
-    author_email=hathizip.__author_email__,
+    version=metadata["__version__"],
+    author=metadata["__author__"],
+    author_email=metadata["__author_email__"],
     options={
         "build_exe": build_exe_options,
         "bdist_msi": {

@@ -1,6 +1,11 @@
+========
 HathiZip
 ========
 
 Creates .zip file packages for HathiTrust. Replacement script for HathiTrust Zip and Submit.
 
-More documentation coming soon.
+.. image:: https://travis-ci.org/UIUCLibrary/HathiZip.svg
+    :target: https://travis-ci.org/UIUCLibrary/HathiZip
+
+
+`Documentation <http://www.library.illinois.edu/dccdocs/hathi_zip/>`_
