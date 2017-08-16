@@ -231,7 +231,7 @@ pipeline {
 //                    sh 'tar -czvf sphinx_html_docs.tar.gz -C html .'
 //                    archiveArtifacts artifacts: 'sphinx_html_docs.tar.gz'
 
-                }
+//                }
             }
         }
     }
