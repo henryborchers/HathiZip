@@ -62,25 +62,6 @@ pipeline {
                                 runner.run()
                             }
                         }
-//                        "Windows": {
-//                            node(label: 'Windows') {
-//                                deleteDir()
-//                                unstash "Source"
-//                                bat "${env.TOX}  -e pytest"
-//                                junit 'reports/junit-*.xml'
-//
-//                            }
-//                        },
-//                        "Linux": {
-//                            node(label: "!Windows") {
-//                                deleteDir()
-//                                unstash "Source"
-//                                withEnv(["PATH=${env.PYTHON3}/..:${env.PATH}"]) {
-//                                    sh "${env.TOX}  -e pytest"
-//                                }
-//                                junit 'reports/junit-*.xml'
-//                            }
-//                        }
                 )
             }
         }
@@ -93,25 +74,55 @@ pipeline {
             steps {
                 parallel(
                         "Documentation": {
-                          node(label: "!Windows"){
-                            deleteDir()
-                            unstash "Source"
-                            sh "${env.TOX} -e docs"
-                            dir('.tox/dist/html/') {
-                              stash includes: '**', name: "HTML Documentation", useDefaultExcludes: false
-                            }
-                          }
+                            script {
+                                def runner = new Tox(this)
+                                runner.env = "docs"
+                                runner.windows = false
+                                runner.stash = "Source"
+                                runner.label = "!Windows"
+                                runner.post = {
+                                    dir('.tox/dist/html/') {
+                                        stash includes: '**', name: "HTML Documentation", useDefaultExcludes: false
+                                    }
+                                }
+                                runner.run()
 
+                            }
                         },
                         "MyPy": {
-                          node(label: "!Windows"){
-                            deleteDir()
-                            unstash "Source"
-                            sh "${env.TOX} -e mypy"
-                            junit 'mypy.xml'
-                          }
+                            script {
+                                def runner = new Tox(this)
+                                runner.env = "mypy"
+                                runner.windows = false
+                                runner.stash = "Source"
+                                runner.label = "!Windows"
+                                runner.post = {
+                                    junit 'mypy.xml'
+                                }
+                                runner.run()
 
+                            }
                         }
+//                        "Documentation": {
+//                          node(label: "!Windows"){
+//                            deleteDir()
+//                            unstash "Source"
+//                            sh "${env.TOX} -e docs"
+//                            dir('.tox/dist/html/') {
+//                              stash includes: '**', name: "HTML Documentation", useDefaultExcludes: false
+//                            }
+//                          }
+//
+//                        },
+//                        "MyPy": {
+//                          node(label: "!Windows"){
+//                            deleteDir()
+//                            unstash "Source"
+//                            sh "${env.TOX} -e mypy"
+//                            junit 'mypy.xml'
+//                          }
+//
+//                        }
                 )
             }
 
@@ -225,7 +236,7 @@ pipeline {
         stage("Update online documentation") {
             agent any
             when {
-              expression {params.UPDATE_DOCS == true }
+                expression { params.UPDATE_DOCS == true }
             }
 
             steps {
