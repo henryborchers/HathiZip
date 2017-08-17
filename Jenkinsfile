@@ -103,37 +103,9 @@ pipeline {
 
                             }
                         }
-//                        "Documentation": {
-//                          node(label: "!Windows"){
-//                            deleteDir()
-//                            unstash "Source"
-//                            sh "${env.TOX} -e docs"
-//                            dir('.tox/dist/html/') {
-//                              stash includes: '**', name: "HTML Documentation", useDefaultExcludes: false
-//                            }
-//                          }
-//
-//                        },
-//                        "MyPy": {
-//                          node(label: "!Windows"){
-//                            deleteDir()
-//                            unstash "Source"
-//                            sh "${env.TOX} -e mypy"
-//                            junit 'mypy.xml'
-//                          }
-//
-//                        }
+
                 )
             }
-
-//            post {
-//              success {
-//                deleteDir()
-//                unstash "HTML Documentation"
-//                sh 'tar -czvf sphinx_html_docs.tar.gz -C html .'
-//                archiveArtifacts artifacts: 'sphinx_html_docs.tar.gz'
-//              }
-//            }
         }
 
         stage("Packaging") {
@@ -181,10 +153,11 @@ pipeline {
                             }
                         },
                         "Source Release": {
-                            deleteDir()
-                            unstash "Source"
-                            sh "${env.PYTHON3} setup.py sdist"
-                            archiveArtifacts artifacts: "dist/**", fingerprint: true
+                            createSourceRelease(env.PYTHON3, "Source")
+//                            deleteDir()
+//                            unstash "Source"
+//                            sh "${env.PYTHON3} setup.py sdist"
+//                            archiveArtifacts artifacts: "dist/**", fingerprint: true
                         }
                 )
             }
