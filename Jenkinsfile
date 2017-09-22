@@ -13,6 +13,7 @@ pipeline {
         booleanParam(name: "ADDITIONAL_TESTS", defaultValue: true, description: "Run additional tests")
         booleanParam(name: "PACKAGE", defaultValue: true, description: "Create a package")
         booleanParam(name: "DEPLOY_SCCM", defaultValue: false, description: "Create SCCM deployment package")
+        booleanParam(name: "DEPLOY_DEVPI", defaultValue: true, description: "Deploy to devpi on http://devpy.library.illinois.edu/DS_Jenkins/${env.BRANCH_NAME}")
         booleanParam(name: "UPDATE_DOCS", defaultValue: false, description: "Update online documentation")
         string(name: 'URL_SUBFOLDER', defaultValue: "hathi_zip", description: 'The directory that the docs should be saved under')
     }
@@ -192,7 +193,36 @@ pipeline {
                 }
             }
         }
+        stage("Deploying to Devpi") {
+            agent {
+                node {
+                    label 'Windows'
+                }
+            }
+            when {
+                expression { params.DEPLOY_DEVPI == true }
+            }
+            steps {
+                deleteDir()
+                unstash "Source"
+                bat "devpi use http://devpy.library.illinois.edu"
+                withCredentials([usernamePassword(credentialsId: 'DS_devpi', usernameVariable: 'DEVPI_USERNAME', passwordVariable: 'DEVPI_PASSWORD')]) {
+                    bat "devpi login ${DEVPI_USERNAME} --password ${DEVPI_PASSWORD}"
+                    bat "devpi use /${DEVPI_USERNAME}/${env.BRANCH_NAME}"
+                    script {
+                        try{
+                            bat "devpi upload --with-docs"
 
+                        } catch (exc) {
+                            echo "Unable to upload to devpi with docs. Trying without"
+                            bat "devpi upload"
+                        }
+                    }
+                    bat "devpi test HathiZip"
+                }
+
+            }
+        }
         stage("Update online documentation") {
             agent any
             when {
