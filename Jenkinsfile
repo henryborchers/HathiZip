@@ -119,7 +119,7 @@ pipeline {
                             node(label: "Windows") {
                                 deleteDir()
                                 unstash "Source"
-                                bat """${env.PYTHON3} -m venv .env
+                                bat """${tool 'Python3.6.3_Win64'} -m venv .env
                                         call .env/Scripts/activate.bat
                                         pip install --upgrade pip setuptools
                                         pip install -r requirements.txt
@@ -132,7 +132,7 @@ pipeline {
                             node(label: "Windows") {
                                 deleteDir()
                                 unstash "Source"
-                                bat """${env.PYTHON3} -m venv .env
+                                bat """${tool 'Python3.6.3_Win64'} -m venv .env
                                        call .env/Scripts/activate.bat
                                        pip install -r requirements.txt
                                        python cx_setup.py bdist_msi --add-to-path=true -k --bdist-dir build/msi
