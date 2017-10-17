@@ -55,7 +55,7 @@ pipeline {
                                 runner.env = "pytest"
                                 runner.windows = false
                                 runner.stash = "Source"
-                                runner.label = "!Windows"
+                                runner.label = "Linux"
                                 runner.post = {
                                     junit 'reports/junit-*.xml'
                                 }
@@ -79,7 +79,7 @@ pipeline {
                                 runner.env = "docs"
                                 runner.windows = false
                                 runner.stash = "Source"
-                                runner.label = "!Windows"
+                                runner.label = "Linux"
                                 runner.post = {
                                     dir('.tox/dist/html/') {
                                         stash includes: '**', name: "HTML Documentation", useDefaultExcludes: false
@@ -95,7 +95,7 @@ pipeline {
                                 runner.env = "mypy"
                                 runner.windows = false
                                 runner.stash = "Source"
-                                runner.label = "!Windows"
+                                runner.label = "Linux"
                                 runner.post = {
                                     junit 'mypy.xml'
                                 }
@@ -160,7 +160,9 @@ pipeline {
         }
 
         stage("Deploy - Staging") {
-            agent any
+            agent {
+                label "Linux"
+            }
             when {
                 expression { params.DEPLOY_SCCM == true && params.PACKAGE == true }
             }
@@ -172,7 +174,9 @@ pipeline {
         }
 
         stage("Deploy - SCCM upload") {
-            agent any
+            agent {
+                label "Linux"
+            }
             when {
                 expression { params.DEPLOY_SCCM == true && params.PACKAGE == true }
             }
@@ -196,7 +200,7 @@ pipeline {
         stage("Deploying to Devpi") {
             agent {
                 node {
-                    label 'Windows'
+                    label 'Windows&&DevPi'
                 }
             }
             when {
@@ -224,7 +228,9 @@ pipeline {
             }
         }
         stage("Update online documentation") {
-            agent any
+            agent {
+                label "Linux"
+            }
             when {
                 expression { params.UPDATE_DOCS == true }
             }
