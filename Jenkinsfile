@@ -153,7 +153,10 @@ pipeline {
                             }
                         },
                         "Source Release": {
-                            createSourceRelease(env.PYTHON3, "Source")
+                            node(label: "Linux"){
+                                createSourceRelease(env.PYTHON3, "Source")
+                            }
+
                         }
                 )
             }
