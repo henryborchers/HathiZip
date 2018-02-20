@@ -58,7 +58,7 @@ goto :eof
     call:venv
     setlocal
     echo Checking development requirements
-    venv\Scripts\pip.exe install -r requirements.txt --upgrade-strategy only-if-needed %*
+    venv\Scripts\pip.exe install -r requirements-dev.txt --upgrade-strategy only-if-needed %*
     REM venv\Scripts\pip.exe install -r requirements-dev.txt --upgrade-strategy only-if-needed %*
     endlocal
 goto :eof
@@ -128,7 +128,7 @@ goto :eof
     call venv\Scripts\activate.bat
     python -m pip install -r requirements.txt
     REM python -m pip install -r requirements-dev.txt
-    REM python -m pip install -r requirements-freeze.txt
+    python -m pip install -r requirements-freeze.txt
     python cx_setup.py bdist_msi --add-to-path=true -k --bdist-dir build/msi
     call build\\msi\\hathizip.exe --pytest
     endlocal
