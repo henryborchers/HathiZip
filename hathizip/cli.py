@@ -18,7 +18,7 @@ def destination_path(path):
 
 
 def get_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description=hathizip.__description__)
+    parser = argparse.ArgumentParser(description="Creates .zip file packages for HathiTrust.")
 
     parser.add_argument(
         '--version',
