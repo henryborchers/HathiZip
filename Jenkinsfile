@@ -35,42 +35,55 @@ pipeline {
             }
 
         }
-
         stage("Unit tests") {
             when {
                 expression { params.UNIT_TESTS == true }
             }
             steps {
-                parallel(
-                        "Windows": {
-                            script {
-                                def runner = new Tox(this)
-                                runner.env = "pytest"
-                                runner.windows = true
-                                runner.stash = "Source"
-                                runner.label = "Windows"
-                                runner.post = {
-                                    junit 'reports/junit-*.xml'
-                                }
-                                runner.run()
-                            }
-                        },
-                        "Linux": {
-                            script {
-                                def runner = new Tox(this)
-                                runner.env = "pytest"
-                                runner.windows = false
-                                runner.stash = "Source"
-                                runner.label = "Linux"
-                                runner.post = {
-                                    junit 'reports/junit-*.xml'
-                                }
-                                runner.run()
-                            }
-                        }
-                )
+                node(label: "Windows") {
+                    checkout scm
+                    bat "${tool 'Python3.6.3_Win64'} -m tox -e pytest -- --junitxml=reports/junit-${env.NODE_NAME}-pytest.xml --junit-prefix=${env.NODE_NAME}-pytest --cov-report html:reports/coverage/ --cov=hathizip"
+                    junit "reports/junit-${env.NODE_NAME}-pytest.xml"
+                    publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, keepAll: false, reportDir: 'reports/coverage', reportFiles: 'index.html', reportName: 'Coverage', reportTitles: ''])
+                }
             }
         }
+
+        // stage("Unit tests") {
+        //     when {
+        //         expression { params.UNIT_TESTS == true }
+        //     }
+        //     steps {
+        //         parallel(
+        //                 "Windows": {
+        //                     script {
+        //                         def runner = new Tox(this)
+        //                         runner.env = "pytest"
+        //                         runner.windows = true
+        //                         runner.stash = "Source"
+        //                         runner.label = "Windows"
+        //                         runner.post = {
+        //                             junit 'reports/junit-*.xml'
+        //                         }
+        //                         runner.run()
+        //                     }
+        //                 },
+        //                 "Linux": {
+        //                     script {
+        //                         def runner = new Tox(this)
+        //                         runner.env = "pytest"
+        //                         runner.windows = false
+        //                         runner.stash = "Source"
+        //                         runner.label = "Linux"
+        //                         runner.post = {
+        //                             junit 'reports/junit-*.xml'
+        //                         }
+        //                         runner.run()
+        //                     }
+        //                 }
+        //         )
+        //     }
+        // }
 
         stage("Additional tests") {
             when {
