@@ -3,6 +3,9 @@ import org.ds.*
 
 pipeline {
     agent any
+    options {
+        disableConcurrentBuilds()  //each branch has 1 job running at a time
+    }
     environment {
         mypy_args = "--junit-xml=mypy.xml"
         pytest_args = "--junitxml=reports/junit-{env:OS:UNKNOWN_OS}-{envname}.xml --junit-prefix={env:OS:UNKNOWN_OS}  --basetemp={envtmpdir}"
