@@ -19,7 +19,7 @@ pipeline {
         booleanParam(name: "ADDITIONAL_TESTS", defaultValue: true, description: "Run additional tests")
         booleanParam(name: "PACKAGE", defaultValue: true, description: "Create a package")
         booleanParam(name: "DEPLOY_SCCM", defaultValue: false, description: "Create SCCM deployment package")
-        booleanParam(name: "DEPLOY_DEVPI", defaultValue: true, description: "Deploy to devpi on http://devpy.library.illinois.edu/DS_Jenkins/${env.BRANCH_NAME}")
+        booleanParam(name: "DEPLOY_DEVPI", defaultValue: true, description: "Deploy to devpi on https://devpi.library.illinois.edu/DS_Jenkins/${env.BRANCH_NAME}")
         booleanParam(name: "UPDATE_DOCS", defaultValue: false, description: "Update online documentation")
         string(name: 'URL_SUBFOLDER', defaultValue: "hathi_zip", description: 'The directory that the docs should be saved under')
     }
@@ -259,7 +259,66 @@ pipeline {
         //         )
         //     }
         // }
+        stage("Deploying to Devpi") {
+            when {
+                expression { params.DEPLOY_DEVPI == true && (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "dev") }
+            }
+            steps {
+                bat "${tool 'Python3.6.3_Win64'} -m devpi use https://devpi.library.illinois.edu"
+                withCredentials([usernamePassword(credentialsId: 'DS_devpi', usernameVariable: 'DEVPI_USERNAME', passwordVariable: 'DEVPI_PASSWORD')]) {
+                    bat "${tool 'Python3.6.3_Win64'} -m devpi login ${DEVPI_USERNAME} --password ${DEVPI_PASSWORD}"
+                    bat "${tool 'Python3.6.3_Win64'} -m devpi use /${DEVPI_USERNAME}/${env.BRANCH_NAME}_staging"
+                    script {
+                        bat "${tool 'Python3.6.3_Win64'} -m devpi upload --from-dir dist"
+                        try {
+                            bat "${tool 'Python3.6.3_Win64'} -m devpi upload --only-docs"
+                        } catch (exc) {
+                            echo "Unable to upload to devpi with docs."
+                        }
+                    }
+                }
 
+            }
+        }
+        stage("Test Devpi packages") {
+            when {
+                expression { params.DEPLOY_DEVPI == true && (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "dev") }
+            }
+            steps {
+                parallel(
+                        "Source": {
+                            script {
+                                def name = bat(returnStdout: true, script: "@${tool 'Python3.6.3_Win64'} setup.py --name").trim()
+                                def version = bat(returnStdout: true, script: "@${tool 'Python3.6.3_Win64'} setup.py --version").trim()
+                                node("Windows") {
+                                    withCredentials([usernamePassword(credentialsId: 'DS_devpi', usernameVariable: 'DEVPI_USERNAME', passwordVariable: 'DEVPI_PASSWORD')]) {
+                                        bat "${tool 'Python3.6.3_Win64'} -m devpi login ${DEVPI_USERNAME} --password ${DEVPI_PASSWORD}"
+                                        bat "${tool 'Python3.6.3_Win64'} -m devpi use /${DEVPI_USERNAME}/${env.BRANCH_NAME}_staging"
+                                        echo "Testing Source package in devpi"
+                                        bat "${tool 'Python3.6.3_Win64'} -m devpi test --index https://devpi.library.illinois.edu/${DEVPI_USERNAME}/${env.BRANCH_NAME}_staging ${name} -s tar.gz"
+                                    }
+                                }
+
+                            }
+                        },
+                        "Wheel": {
+                            script {
+                                def name = bat(returnStdout: true, script: "@${tool 'Python3.6.3_Win64'} setup.py --name").trim()
+                                def version = bat(returnStdout: true, script: "@${tool 'Python3.6.3_Win64'} setup.py --version").trim()
+                                node("Windows") {
+                                    withCredentials([usernamePassword(credentialsId: 'DS_devpi', usernameVariable: 'DEVPI_USERNAME', passwordVariable: 'DEVPI_PASSWORD')]) {
+                                        bat "${tool 'Python3.6.3_Win64'} -m devpi login ${DEVPI_USERNAME} --password ${DEVPI_PASSWORD}"
+                                        bat "${tool 'Python3.6.3_Win64'} -m devpi use /${DEVPI_USERNAME}/${env.BRANCH_NAME}_staging"
+                                        echo "Testing Whl package in devpi"
+                                        bat " ${tool 'Python3.6.3_Win64'} -m devpi test --index https://devpi.library.illinois.edu/${DEVPI_USERNAME}/${env.BRANCH_NAME}_staging ${name} -s whl"
+                                    }
+                                }
+
+                            }
+                        }
+                )
+
+            }
         stage("Deploy - Staging") {
             agent {
                 label "Linux"
@@ -310,7 +369,7 @@ pipeline {
             steps {
                 deleteDir()
                 unstash "Source"
-                bat "devpi use http://devpy.library.illinois.edu"
+                bat "devpi use https://devpi.library.illinois.edu"
                 withCredentials([usernamePassword(credentialsId: 'DS_devpi', usernameVariable: 'DEVPI_USERNAME', passwordVariable: 'DEVPI_PASSWORD')]) {
                     bat "devpi login ${DEVPI_USERNAME} --password ${DEVPI_PASSWORD}"
                     bat "devpi use /${DEVPI_USERNAME}/${env.BRANCH_NAME}"
