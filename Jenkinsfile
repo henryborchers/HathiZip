@@ -319,6 +319,7 @@ pipeline {
                 )
 
             }
+        }
         stage("Deploy - Staging") {
             agent {
                 label "Linux"
