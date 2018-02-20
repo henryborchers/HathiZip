@@ -163,7 +163,6 @@ pipeline {
         //         )
         //     }
         // }
-
         stage("Packaging") {
             when {
                 expression { params.PACKAGE == true }
@@ -171,30 +170,15 @@ pipeline {
 
             steps {
                 parallel(
-                        "Windows Wheel": {
-                            node(label: "Windows") {
-                                deleteDir()
-                                unstash "Source"
-                                bat """${tool 'Python3.6.3_Win64'} -m venv .env
-                                        call .env/Scripts/activate.bat
-                                        pip install --upgrade pip setuptools
-                                        pip install -r requirements.txt
-                                        python setup.py bdist_wheel --universal
-                                    """
-                                archiveArtifacts artifacts: "dist/**", fingerprint: true
-                            }
+                        "Source and Wheel formats": {
+                            bat "call make.bat"
                         },
                         "Windows CX_Freeze MSI": {
                             node(label: "Windows") {
                                 deleteDir()
-                                unstash "Source"
-                                bat """${tool 'Python3.6.3_Win64'} -m venv .env
-                                       call .env/Scripts/activate.bat
-                                       pip install -r requirements.txt
-                                       python cx_setup.py bdist_msi --add-to-path=true -k --bdist-dir build/msi
-                                       call .env/Scripts/deactivate.bat
-                                    """
-                                bat "build\\msi\\hathizip.exe --pytest"
+                                checkout scm
+                                bat "${tool 'Python3.6.3_Win64'} -m venv venv"
+                                bat "make freeze"
                                 dir("dist") {
                                     stash includes: "*.msi", name: "msi"
                                 }
@@ -205,18 +189,74 @@ pipeline {
                                 git url: 'https://github.com/UIUCLibrary/ValidateMSI.git'
                                 unstash "msi"
                                 bat "call validate.bat -i"
-                                archiveArtifacts artifacts: "*.msi", fingerprint: true
+                                
                             }
                         },
-                        "Source Release": {
-                            node(label: "Linux"){
-                                createSourceRelease(env.PYTHON3, "Source")
-                            }
-
-                        }
                 )
             }
+            post {
+              success {
+                  dir("dist"){
+                      archiveArtifacts artifacts: "*.whl", fingerprint: true
+                      archiveArtifacts artifacts: "*.tar.gz", fingerprint: true
+                }
+              }
+            }
+
         }
+        // stage("Packaging") {
+        //     when {
+        //         expression { params.PACKAGE == true }
+        //     }
+
+        //     steps {
+        //         parallel(
+        //                 "Windows Wheel": {
+        //                     node(label: "Windows") {
+        //                         deleteDir()
+        //                         unstash "Source"
+        //                         bat """${tool 'Python3.6.3_Win64'} -m venv .env
+        //                                 call .env/Scripts/activate.bat
+        //                                 pip install --upgrade pip setuptools
+        //                                 pip install -r requirements.txt
+        //                                 python setup.py bdist_wheel --universal
+        //                             """
+        //                         archiveArtifacts artifacts: "dist/**", fingerprint: true
+        //                     }
+        //                 },
+        //                 "Windows CX_Freeze MSI": {
+        //                     node(label: "Windows") {
+        //                         deleteDir()
+        //                         unstash "Source"
+        //                         bat """${tool 'Python3.6.3_Win64'} -m venv .env
+        //                                call .env/Scripts/activate.bat
+        //                                pip install -r requirements.txt
+        //                                python cx_setup.py bdist_msi --add-to-path=true -k --bdist-dir build/msi
+        //                                call .env/Scripts/deactivate.bat
+        //                             """
+        //                         bat "build\\msi\\hathizip.exe --pytest"
+        //                         dir("dist") {
+        //                             stash includes: "*.msi", name: "msi"
+        //                         }
+
+        //                     }
+        //                     node(label: "Windows") {
+        //                         deleteDir()
+        //                         git url: 'https://github.com/UIUCLibrary/ValidateMSI.git'
+        //                         unstash "msi"
+        //                         bat "call validate.bat -i"
+        //                         archiveArtifacts artifacts: "*.msi", fingerprint: true
+        //                     }
+        //                 },
+        //                 "Source Release": {
+        //                     node(label: "Linux"){
+        //                         createSourceRelease(env.PYTHON3, "Source")
+        //                     }
+
+        //                 }
+        //         )
+        //     }
+        // }
 
         stage("Deploy - Staging") {
             agent {
