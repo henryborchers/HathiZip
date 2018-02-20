@@ -1,5 +1,28 @@
 # Include the license file
-include LICENSE tox.ini README.rst requirements.txt
+include LICENSE
 
-recursive-include tests *
-recursive-include doc *
+# Tox configuration setting
+include tox.ini
+
+# Build scripts
+include make.bat
+
+# README and the files it references
+include README.rst
+
+# Running requirements
+include requirements.txt
+
+# Development requirements
+include requirements-dev.txt
+
+# Freeze requirements
+requirements-freeze.txt
+
+recursive-include tests *.py
+
+# Documentation
+# include docs/Makefile
+include docs/make.bat
+recursive-include docs/source *
+prune docs/build

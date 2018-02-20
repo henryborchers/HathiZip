@@ -1,13 +1,22 @@
 import os
 import sys
+from setuptools.config import read_configuration
+
 import cx_Freeze
 import pytest
 import platform
 
-metadata = dict()
-metadata_file = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'hathizip', '__version__.py')
-with open(metadata_file, 'r', encoding='utf-8') as f:
-    exec(f.read(), metadata)
+# metadata = dict()
+# metadata_file = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'hathizip', '__version__.py')
+# with open(metadata_file, 'r', encoding='utf-8') as f:
+#     exec(f.read(), metadata)
+
+
+
+def get_project_metadata():
+    path = os.path.abspath(os.path.join(os.path.dirname(__file__), "setup.cfg"))
+    return read_configuration(path)["metadata"]
+metadata = get_project_metadata()
 
 
 def create_msi_tablename(python_name, fullname):
@@ -30,8 +39,8 @@ def get_tests():
 
 
 INCLUDE_FILES = [
-    "documentation.url",
-] + get_tests()
+            "documentation.url",
+                ] + get_tests()
 
 directory_table = [
     (
@@ -42,14 +51,14 @@ directory_table = [
     (
         "PMenu",  # Directory
         "ProgramMenuFolder",  # Directory_parent
-        create_msi_tablename(metadata["__title__"], metadata["FULL_TITLE"])
+        create_msi_tablename(metadata["name"], "Hathi Zip for Submit")
     ),
 ]
 shortcut_table = [
     (
         "startmenuShortcutDoc",  # Shortcut
         "PMenu",  # Directory_
-        "{} Documentation".format(create_msi_tablename(metadata["__title__"], metadata["FULL_TITLE"])),
+        "{} Documentation".format(create_msi_tablename(metadata["name"], "Hathi Zip for Submit")),
         "TARGETDIR",  # Component_
         "[TARGETDIR]documentation.url",  # Target
         None,  # Arguments
@@ -66,11 +75,12 @@ if os.path.exists(MSVC):
     INCLUDE_FILES.append(MSVC)
 
 build_exe_options = {
-    "includes":        pytest.freeze_includes(),
+    "includes": pytest.freeze_includes(),
     "include_msvcr": True,
     "packages": [
         "os",
         'pytest',
+        'setuptools',
         # "lxml",
         "packaging",
         "six",
@@ -85,12 +95,17 @@ build_exe_options = {
 
 target_name = "hathizip.exe" if platform.system() == "Windows" else "hathizip"
 cx_Freeze.setup(
-    name=metadata["FULL_TITLE"],
-    description=metadata["__description__"],
-    license="University of Illinois/NCSA Open Source License",
-    version=metadata["__version__"],
-    author=metadata["__author__"],
-    author_email=metadata["__author_email__"],
+    name="Hathi Zip for Submit",
+    description=metadata['description'],
+    version=metadata['version'],
+    license=metadata['license'],
+    author=metadata['author'],
+    author_email=metadata['author_email'],
+    # description=metadata["__description__"],
+    # license="University of Illinois/NCSA Open Source License",
+    # version=metadata["__version__"],
+    # author=metadata["__author__"],
+    # author_email=metadata["__author_email__"],
     options={
         "build_exe": build_exe_options,
         "bdist_msi": {
@@ -103,6 +118,6 @@ cx_Freeze.setup(
         }
     },
     executables=[cx_Freeze.Executable("hathizip/__main__.py",
-                            targetName=target_name, base="Console")],
+                                      targetName=target_name, base="Console")],
 
 )
