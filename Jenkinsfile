@@ -1,8 +1,11 @@
+#!groovy
 @Library("ds-utils")
 import org.ds.*
 
 pipeline {
-    agent any
+    agent {
+        label "Windows&&DevPi"
+    }
     options {
         disableConcurrentBuilds()  //each branch has 1 job running at a time
     }
