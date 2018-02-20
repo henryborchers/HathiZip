@@ -58,6 +58,7 @@ goto :eof
     call:venv
     setlocal
     echo Checking development requirements
+    venv\Scripts\pip.exe install -r requirements.txt --upgrade-strategy only-if-needed %*
     venv\Scripts\pip.exe install -r requirements-dev.txt --upgrade-strategy only-if-needed %*
     REM venv\Scripts\pip.exe install -r requirements-dev.txt --upgrade-strategy only-if-needed %*
     endlocal
