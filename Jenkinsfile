@@ -197,8 +197,10 @@ pipeline {
             post {
               success {
                   dir("dist"){
+                      unstash "msi"
                       archiveArtifacts artifacts: "*.whl", fingerprint: true
                       archiveArtifacts artifacts: "*.tar.gz", fingerprint: true
+                      archiveArtifacts artifacts: "*.msi", fingerprint: true
                 }
               }
             }
