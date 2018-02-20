@@ -320,37 +320,62 @@ pipeline {
 
             }
         }
-        stage("Deploy - Staging") {
-            agent {
-                label "Linux"
-            }
+        // stage("Deploy - Staging") {
+        //     agent {
+        //         label "Linux"
+        //     }
+        //     when {
+        //         expression { params.DEPLOY_SCCM == true && params.PACKAGE == true }
+        //     }
+
+        //     steps {
+        //         deployStash("msi", "${env.SCCM_STAGING_FOLDER}/${params.PROJECT_NAME}/")
+        //         input("Deploy to production?")
+        //     }
+        // }
+
+        // stage("Deploy - SCCM upload") {
+        //     agent {
+        //         label "Linux"
+        //     }
+        //     when {
+        //         expression { params.DEPLOY_SCCM == true && params.PACKAGE == true }
+        //     }
+
+        //     steps {
+        //         deployStash("msi", "${env.SCCM_UPLOAD_FOLDER}")
+        //     }
+
+        //     post {
+        //         success {
+        //             script{
+        //                 unstash "Source"
+        //                 def  deployment_request = requestDeploy this, "deployment.yml"
+        //                 echo deployment_request
+        //                 writeFile file: "deployment_request.txt", text: deployment_request
+        //                 archiveArtifacts artifacts: "deployment_request.txt"
+        //             }
+        //         }
+        //     }
+        // }
+        stage("Deploy to SCCM") {
             when {
-                expression { params.DEPLOY_SCCM == true && params.PACKAGE == true }
+                expression { params.RELEASE == "Release_to_devpi_and_sccm"}
             }
 
             steps {
-                deployStash("msi", "${env.SCCM_STAGING_FOLDER}/${params.PROJECT_NAME}/")
-                input("Deploy to production?")
-            }
-        }
+                node("Linux"){
+                    unstash "msi"
+                    deployStash("msi", "${env.SCCM_STAGING_FOLDER}/${params.PROJECT_NAME}/")
+                    input("Deploy to production?")
+                    deployStash("msi", "${env.SCCM_UPLOAD_FOLDER}")
+                }
 
-        stage("Deploy - SCCM upload") {
-            agent {
-                label "Linux"
             }
-            when {
-                expression { params.DEPLOY_SCCM == true && params.PACKAGE == true }
-            }
-
-            steps {
-                deployStash("msi", "${env.SCCM_UPLOAD_FOLDER}")
-            }
-
             post {
                 success {
                     script{
-                        unstash "Source"
-                        def  deployment_request = requestDeploy this, "deployment.yml"
+                        def deployment_request = requestDeploy this, "deployment.yml"
                         echo deployment_request
                         writeFile file: "deployment_request.txt", text: deployment_request
                         archiveArtifacts artifacts: "deployment_request.txt"
@@ -358,36 +383,6 @@ pipeline {
                 }
             }
         }
-        // stage("Deploying to Devpi") {
-        //     agent {
-        //         node {
-        //             label 'Windows&&DevPi'
-        //         }
-        //     }
-        //     when {
-        //         expression { params.DEPLOY_DEVPI == true }
-        //     }
-        //     steps {
-        //         deleteDir()
-        //         unstash "Source"
-        //         bat "devpi use https://devpi.library.illinois.edu"
-        //         withCredentials([usernamePassword(credentialsId: 'DS_devpi', usernameVariable: 'DEVPI_USERNAME', passwordVariable: 'DEVPI_PASSWORD')]) {
-        //             bat "devpi login ${DEVPI_USERNAME} --password ${DEVPI_PASSWORD}"
-        //             bat "devpi use /${DEVPI_USERNAME}/${env.BRANCH_NAME}"
-        //             script {
-        //                 try{
-        //                     bat "devpi upload --with-docs"
-
-        //                 } catch (exc) {
-        //                     echo "Unable to upload to devpi with docs. Trying without"
-        //                     bat "devpi upload"
-        //                 }
-        //             }
-        //             bat "devpi test HathiZip"
-        //         }
-
-        //     }
-        // }
         stage("Update online documentation") {
             agent {
                 label "Linux"
