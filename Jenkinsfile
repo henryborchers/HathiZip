@@ -358,36 +358,36 @@ pipeline {
                 }
             }
         }
-        stage("Deploying to Devpi") {
-            agent {
-                node {
-                    label 'Windows&&DevPi'
-                }
-            }
-            when {
-                expression { params.DEPLOY_DEVPI == true }
-            }
-            steps {
-                deleteDir()
-                unstash "Source"
-                bat "devpi use https://devpi.library.illinois.edu"
-                withCredentials([usernamePassword(credentialsId: 'DS_devpi', usernameVariable: 'DEVPI_USERNAME', passwordVariable: 'DEVPI_PASSWORD')]) {
-                    bat "devpi login ${DEVPI_USERNAME} --password ${DEVPI_PASSWORD}"
-                    bat "devpi use /${DEVPI_USERNAME}/${env.BRANCH_NAME}"
-                    script {
-                        try{
-                            bat "devpi upload --with-docs"
+        // stage("Deploying to Devpi") {
+        //     agent {
+        //         node {
+        //             label 'Windows&&DevPi'
+        //         }
+        //     }
+        //     when {
+        //         expression { params.DEPLOY_DEVPI == true }
+        //     }
+        //     steps {
+        //         deleteDir()
+        //         unstash "Source"
+        //         bat "devpi use https://devpi.library.illinois.edu"
+        //         withCredentials([usernamePassword(credentialsId: 'DS_devpi', usernameVariable: 'DEVPI_USERNAME', passwordVariable: 'DEVPI_PASSWORD')]) {
+        //             bat "devpi login ${DEVPI_USERNAME} --password ${DEVPI_PASSWORD}"
+        //             bat "devpi use /${DEVPI_USERNAME}/${env.BRANCH_NAME}"
+        //             script {
+        //                 try{
+        //                     bat "devpi upload --with-docs"
 
-                        } catch (exc) {
-                            echo "Unable to upload to devpi with docs. Trying without"
-                            bat "devpi upload"
-                        }
-                    }
-                    bat "devpi test HathiZip"
-                }
+        //                 } catch (exc) {
+        //                     echo "Unable to upload to devpi with docs. Trying without"
+        //                     bat "devpi upload"
+        //                 }
+        //             }
+        //             bat "devpi test HathiZip"
+        //         }
 
-            }
-        }
+        //     }
+        // }
         stage("Update online documentation") {
             agent {
                 label "Linux"
