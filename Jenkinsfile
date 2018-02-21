@@ -123,6 +123,7 @@ pipeline {
                       unstash "msi"
                       archiveArtifacts artifacts: "*.whl", fingerprint: true
                       archiveArtifacts artifacts: "*.tar.gz", fingerprint: true
+                      archiveArtifacts artifacts: "*.zip", fingerprint: true
                       archiveArtifacts artifacts: "*.msi", fingerprint: true
                 }
               }
@@ -204,6 +205,21 @@ pipeline {
                         }
                 )
 
+            }
+            post {
+                success {
+                    echo "It Worked. Pushing file to ${env.BRANCH_NAME} index"
+                    script {
+                        def name = bat(returnStdout: true, script: "@${tool 'Python3.6.3_Win64'} setup.py --name").trim()
+                        def version = bat(returnStdout: true, script: "@${tool 'Python3.6.3_Win64'} setup.py --version").trim()
+                        withCredentials([usernamePassword(credentialsId: 'DS_devpi', usernameVariable: 'DEVPI_USERNAME', passwordVariable: 'DEVPI_PASSWORD')]) {
+                            bat "${tool 'Python3.6.3_Win64'} -m devpi login ${DEVPI_USERNAME} --password ${DEVPI_PASSWORD}"
+                            bat "${tool 'Python3.6.3_Win64'} -m devpi use /${DEVPI_USERNAME}/${env.BRANCH_NAME}_staging"
+                            bat "${tool 'Python3.6.3_Win64'} -m devpi push ${name}==${version} ${DEVPI_USERNAME}/${env.BRANCH_NAME}"
+                        }
+
+                    }
+                }
             }
         }
 
