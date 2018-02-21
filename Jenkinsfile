@@ -26,7 +26,6 @@ pipeline {
     stages {
 
         stage("Cloning Source") {
-            agent any
 
             steps {
                 deleteDir()
