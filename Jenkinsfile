@@ -34,14 +34,6 @@ pipeline {
             }
 
         }
-        stage("Downloading dependencies") {
-
-            steps {
-                bat "${tool 'Python3.6.3_Win64'} -m pip download -d vendor -r requirements.txt"
-            }
-
-        }
-
         stage("Unit tests") {
             when {
                 expression { params.UNIT_TESTS == true }
