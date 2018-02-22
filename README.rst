@@ -9,5 +9,5 @@ Documentation can be found `here <http://www.library.illinois.edu/dccdocs/hathi_
 
 Master Branch:
 
-.. image:: https://jenkins.library.illinois.edu/jenkins/buildStatus/icon?job=HathiZip/master
-    :target: https://jenkins.library.illinois.edu/jenkins/job/HathiZip/job/master/
+.. image:: https://jenkins.library.illinois.edu/buildStatus/icon?job=HathiZip/master
+    :target: https://jenkins.library.illinois.edu/job/HathiZip/job/master/
