@@ -129,7 +129,7 @@ pipeline {
             }
 
         }
-        stage("Deploying to Devpi") {
+        stage("Deploying to Devpi Staging") {
             when {
                 expression { params.DEPLOY_DEVPI == true && (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "dev") }
             }
