@@ -28,9 +28,10 @@ API Documentation
 Extras
 ------
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
 
    dependencies
+   history
 
 Indices and tables
 ==================
