@@ -443,27 +443,27 @@ pipeline {
                 }
             }
         }
-        stage("Deploying to Devpi Staging") {
-            when {
-                expression { params.DEPLOY_DEVPI == true && (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "dev") }
-            }
-            steps {
-                bat "${tool 'CPython-3.6'} -m devpi use https://devpi.library.illinois.edu"
-                withCredentials([usernamePassword(credentialsId: 'DS_devpi', usernameVariable: 'DEVPI_USERNAME', passwordVariable: 'DEVPI_PASSWORD')]) {
-                    bat "${tool 'CPython-3.6'} -m devpi login ${DEVPI_USERNAME} --password ${DEVPI_PASSWORD}"
-                    bat "${tool 'CPython-3.6'} -m devpi use /${DEVPI_USERNAME}/${env.BRANCH_NAME}_staging"
-                    script {
-                        bat "${tool 'CPython-3.6'} -m devpi upload --from-dir dist"
-                        try {
-                            bat "${tool 'CPython-3.6'} -m devpi upload --only-docs"
-                        } catch (exc) {
-                            echo "Unable to upload to devpi with docs."
-                        }
-                    }
-                }
-
-            }
-        }
+//        stage("Deploying to Devpi Staging") {
+//            when {
+//                expression { params.DEPLOY_DEVPI == true && (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "dev") }
+//            }
+//            steps {
+//                bat "${tool 'CPython-3.6'} -m devpi use https://devpi.library.illinois.edu"
+//                withCredentials([usernamePassword(credentialsId: 'DS_devpi', usernameVariable: 'DEVPI_USERNAME', passwordVariable: 'DEVPI_PASSWORD')]) {
+//                    bat "${tool 'CPython-3.6'} -m devpi login ${DEVPI_USERNAME} --password ${DEVPI_PASSWORD}"
+//                    bat "${tool 'CPython-3.6'} -m devpi use /${DEVPI_USERNAME}/${env.BRANCH_NAME}_staging"
+//                    script {
+//                        bat "${tool 'CPython-3.6'} -m devpi upload --from-dir dist"
+//                        try {
+//                            bat "${tool 'CPython-3.6'} -m devpi upload --only-docs"
+//                        } catch (exc) {
+//                            echo "Unable to upload to devpi with docs."
+//                        }
+//                    }
+//                }
+//
+//            }
+//        }
 //        stage("Test Devpi packages") {
 //            when {
 //                expression { params.DEPLOY_DEVPI == true && (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "dev") }
@@ -558,6 +558,34 @@ pipeline {
 //                }
 //            }
 //        }
+        stage("Deploying to Devpi") {
+            when {
+                allOf{
+                    equals expected: true, actual: params.DEPLOY_DEVPI
+                    anyOf {
+                        equals expected: "master", actual: env.BRANCH_NAME
+                        equals expected: "dev", actual: env.BRANCH_NAME
+                    }
+                }
+            }
+            steps {
+                bat "venv\\Scripts\\devpi.exe use http://devpy.library.illinois.edu"
+                withCredentials([usernamePassword(credentialsId: 'DS_devpi', usernameVariable: 'DEVPI_USERNAME', passwordVariable: 'DEVPI_PASSWORD')]) {
+                    bat "venv\\Scripts\\devpi.exe login ${DEVPI_USERNAME} --password ${DEVPI_PASSWORD}"
+                    bat "venv\\Scripts\\devpi.exe use /${DEVPI_USERNAME}/${env.BRANCH_NAME}_staging"
+                    script {
+                        bat "venv\\Scripts\\devpi.exe upload --from-dir dist"
+                        try {
+//                            bat "venv\\Scripts\\devpi.exe upload --only-docs"
+                            bat "venv\\Scripts\\devpi.exe upload --only-docs ${WORKSPACE}\\dist\\${DOC_ZIP_FILENAME}"
+                        } catch (exc) {
+                            echo "Unable to upload to devpi with docs."
+                        }
+                    }
+                }
+
+            }
+        }
         stage("Test Devpi packages") {
             when {
                 allOf{
