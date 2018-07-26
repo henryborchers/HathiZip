@@ -47,7 +47,8 @@ metadata = get_project_metadata()
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.githubpages',
-    'sphinx.ext.napoleon'
+    'sphinx.ext.napoleon',
+    'sphinx.ext.doctest',
 ]
 napoleon_google_docstring = True
 napoleon_numpy_docstring = True
