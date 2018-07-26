@@ -174,66 +174,6 @@ pipeline {
             }
         }
 
-//        stage("Cloning Source") {
-//
-//            steps {
-//                deleteDir()
-//                checkout scm
-//                stash includes: '**', name: "Source", useDefaultExcludes: false
-//            }
-//
-//        }
-//        stage("Unit tests") {
-//            when {
-//                expression { params.UNIT_TESTS == true }
-//            }
-//            steps {
-//                node(label: "Windows") {
-//                    checkout scm
-//                    bat "${tool 'CPython-3.6'} -m tox -e pytest -- --junitxml=reports/junit-${env.NODE_NAME}-pytest.xml --junit-prefix=${env.NODE_NAME}-pytest --cov-report html:reports/coverage/ --cov=hathizip"
-//                    junit "reports/junit-${env.NODE_NAME}-pytest.xml"
-//                    publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, keepAll: false, reportDir: 'reports/coverage', reportFiles: 'index.html', reportName: 'Coverage', reportTitles: ''])
-//                }
-//            }
-//        }
-//        stage("Additional tests") {
-//            when {
-//                expression { params.ADDITIONAL_TESTS == true }
-//            }
-//
-//            steps {
-//                parallel(
-//                    "Documentation": {
-//                        node(label: "Windows") {
-//                            checkout scm
-//                            bat "${tool 'CPython-3.6'} -m tox -e docs"
-//                            script{
-//                                // Multibranch jobs add the slash and add the branch to the job name. I need only the job name
-//                                def alljob = env.JOB_NAME.tokenize("/") as String[]
-//                                def project_name = alljob[0]
-//                                dir('.tox/dist') {
-//                                    zip archive: true, dir: 'html', glob: '', zipFile: "${project_name}-${env.BRANCH_NAME}-docs-html-${env.GIT_COMMIT.substring(0,6)}.zip"
-//                                    dir("html"){
-//                                        stash includes: '**', name: "HTML Documentation"
-//                                    }
-//                                }
-//                            }
-//                            publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, keepAll: false, reportDir: '.tox/dist/html', reportFiles: 'index.html', reportName: 'Documentation', reportTitles: ''])
-//                        }
-//                    },
-//                    "MyPy": {
-//
-//                        node(label: "Windows") {
-//                            checkout scm
-//                            bat "call make.bat install-dev"
-//                            bat "venv\\Scripts\\mypy.exe -p hathizip --junit-xml=junit-${env.NODE_NAME}-mypy.xml --html-report reports/mypy_html"
-//                            junit "junit-${env.NODE_NAME}-mypy.xml"
-//                            publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, keepAll: false, reportDir: 'reports/mypy_html', reportFiles: 'index.html', reportName: 'MyPy', reportTitles: ''])
-//                        }
-//                    }
-//                )
-//            }
-//        }
         stage("Build"){
             stages{
                 stage("Python Package"){
@@ -304,7 +244,6 @@ pipeline {
                                     }
                                 }
                             }
-                            // junit "reports/junit-${env.NODE_NAME}-pytest.xml"
                             publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, keepAll: false, reportDir: 'reports/coverage', reportFiles: 'index.html', reportName: 'Coverage', reportTitles: ''])
                         }
                     }
@@ -338,50 +277,6 @@ pipeline {
                 }
             }
         }
-//        stage("Packaging") {
-//            when {
-//                expression { params.PACKAGE == true }
-//            }
-//
-//            steps {
-//                parallel(
-//                        "Source and Wheel formats": {
-//                            bat "call make.bat"
-//                        },
-//                        "Windows CX_Freeze MSI": {
-//                            node(label: "Windows") {
-//                                deleteDir()
-//                                checkout scm
-//                                bat "${tool 'CPython-3.6'} -m venv venv"
-//                                bat "make freeze"
-//                                dir("dist") {
-//                                    stash includes: "*.msi", name: "msi"
-//                                }
-//
-//                            }
-//                            node(label: "Windows") {
-//                                deleteDir()
-//                                git url: 'https://github.com/UIUCLibrary/ValidateMSI.git'
-//                                unstash "msi"
-//                                bat "call validate.bat -i"
-//
-//                            }
-//                        },
-//                )
-//            }
-//            post {
-//              success {
-//                  dir("dist"){
-//                      unstash "msi"
-//                      archiveArtifacts artifacts: "*.whl", fingerprint: true
-//                      archiveArtifacts artifacts: "*.tar.gz", fingerprint: true
-//                      archiveArtifacts artifacts: "*.zip", fingerprint: true
-//                      archiveArtifacts artifacts: "*.msi", fingerprint: true
-//                }
-//              }
-//            }
-//
-//        }
         stage("Packaging") {
             when {
                 expression { params.DEPLOY_DEVPI == true || params.RELEASE != "None"}
@@ -443,121 +338,6 @@ pipeline {
                 }
             }
         }
-//        stage("Deploying to Devpi Staging") {
-//            when {
-//                expression { params.DEPLOY_DEVPI == true && (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "dev") }
-//            }
-//            steps {
-//                bat "${tool 'CPython-3.6'} -m devpi use https://devpi.library.illinois.edu"
-//                withCredentials([usernamePassword(credentialsId: 'DS_devpi', usernameVariable: 'DEVPI_USERNAME', passwordVariable: 'DEVPI_PASSWORD')]) {
-//                    bat "${tool 'CPython-3.6'} -m devpi login ${DEVPI_USERNAME} --password ${DEVPI_PASSWORD}"
-//                    bat "${tool 'CPython-3.6'} -m devpi use /${DEVPI_USERNAME}/${env.BRANCH_NAME}_staging"
-//                    script {
-//                        bat "${tool 'CPython-3.6'} -m devpi upload --from-dir dist"
-//                        try {
-//                            bat "${tool 'CPython-3.6'} -m devpi upload --only-docs"
-//                        } catch (exc) {
-//                            echo "Unable to upload to devpi with docs."
-//                        }
-//                    }
-//                }
-//
-//            }
-//        }
-//        stage("Test Devpi packages") {
-//            when {
-//                expression { params.DEPLOY_DEVPI == true && (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "dev") }
-//            }
-//            steps {
-//                parallel(
-//                        "Source Distribution: .tar.gz": {
-//                            script {
-//                                def name = bat(returnStdout: true, script: "@${tool 'CPython-3.6'} setup.py --name").trim()
-//                                def version = bat(returnStdout: true, script: "@${tool 'CPython-3.6'} setup.py --version").trim()
-//                                node("Windows") {
-//                                    withCredentials([usernamePassword(credentialsId: 'DS_devpi', usernameVariable: 'DEVPI_USERNAME', passwordVariable: 'DEVPI_PASSWORD')]) {
-//                                        bat "${tool 'CPython-3.6'} -m devpi login ${DEVPI_USERNAME} --password ${DEVPI_PASSWORD}"
-//                                        bat "${tool 'CPython-3.6'} -m devpi use /${DEVPI_USERNAME}/${env.BRANCH_NAME}_staging"
-//                                        echo "Testing Source package in devpi"
-//                                        bat "${tool 'CPython-3.6'} -m devpi test --index https://devpi.library.illinois.edu/${DEVPI_USERNAME}/${env.BRANCH_NAME}_staging ${name} -s tar.gz"
-//                                    }
-//                                }
-//
-//                            }
-//                        },
-//                        "Source Distribution: .zip": {
-//                            script {
-//                                def name = bat(returnStdout: true, script: "@${tool 'CPython-3.6'} setup.py --name").trim()
-//                                def version = bat(returnStdout: true, script: "@${tool 'CPython-3.6'} setup.py --version").trim()
-//                                node("Windows") {
-//                                    withCredentials([usernamePassword(credentialsId: 'DS_devpi', usernameVariable: 'DEVPI_USERNAME', passwordVariable: 'DEVPI_PASSWORD')]) {
-//                                        bat "${tool 'CPython-3.6'} -m devpi login ${DEVPI_USERNAME} --password ${DEVPI_PASSWORD}"
-//                                        bat "${tool 'CPython-3.6'} -m devpi use /${DEVPI_USERNAME}/${env.BRANCH_NAME}_staging"
-//                                        echo "Testing Source package in devpi"
-//                                        bat "${tool 'CPython-3.6'} -m devpi test --index https://devpi.library.illinois.edu/${DEVPI_USERNAME}/${env.BRANCH_NAME}_staging ${name} -s zip"
-//                                    }
-//                                }
-//
-//                            }
-//                        },
-//
-//                        "Built Distribution: Wheel": {
-//                            script {
-//                                def name = bat(returnStdout: true, script: "@${tool 'CPython-3.6'} setup.py --name").trim()
-//                                def version = bat(returnStdout: true, script: "@${tool 'CPython-3.6'} setup.py --version").trim()
-//                                node("Windows") {
-//                                    withCredentials([usernamePassword(credentialsId: 'DS_devpi', usernameVariable: 'DEVPI_USERNAME', passwordVariable: 'DEVPI_PASSWORD')]) {
-//                                        bat "${tool 'CPython-3.6'} -m devpi login ${DEVPI_USERNAME} --password ${DEVPI_PASSWORD}"
-//                                        bat "${tool 'CPython-3.6'} -m devpi use /${DEVPI_USERNAME}/${env.BRANCH_NAME}_staging"
-//                                        echo "Testing Whl package in devpi"
-//                                        bat " ${tool 'CPython-3.6'} -m devpi test --index https://devpi.library.illinois.edu/${DEVPI_USERNAME}/${env.BRANCH_NAME}_staging ${name} -s whl"
-//                                    }
-//                                }
-//
-//                            }
-//                        }
-//                )
-//
-//            }
-//            post {
-//                success {
-//                    echo "It Worked. Pushing file to ${env.BRANCH_NAME} index"
-//                    script {
-//                        def name = bat(returnStdout: true, script: "@${tool 'CPython-3.6'} setup.py --name").trim()
-//                        def version = bat(returnStdout: true, script: "@${tool 'CPython-3.6'} setup.py --version").trim()
-//                        withCredentials([usernamePassword(credentialsId: 'DS_devpi', usernameVariable: 'DEVPI_USERNAME', passwordVariable: 'DEVPI_PASSWORD')]) {
-//                            bat "${tool 'CPython-3.6'} -m devpi login ${DEVPI_USERNAME} --password ${DEVPI_PASSWORD}"
-//                            bat "${tool 'CPython-3.6'} -m devpi use /${DEVPI_USERNAME}/${env.BRANCH_NAME}_staging"
-//                            bat "${tool 'CPython-3.6'} -m devpi push ${name}==${version} ${DEVPI_USERNAME}/${env.BRANCH_NAME}"
-//                        }
-//
-//                    }
-//                }
-//            }
-//        }
-//        stage("Release to DevPi production") {
-//            when {
-//                expression { params.RELEASE != "None" && env.BRANCH_NAME == "master" }
-//            }
-//
-//            steps {
-//                script {
-//                    if (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "dev"){
-//                        def name = bat(returnStdout: true, script: "@${tool 'CPython-3.6'} setup.py --name").trim()
-//                        def version = bat(returnStdout: true, script: "@${tool 'CPython-3.6'} setup.py --version").trim()
-//                        withCredentials([usernamePassword(credentialsId: 'DS_devpi', usernameVariable: 'DEVPI_USERNAME', passwordVariable: 'DEVPI_PASSWORD')]) {
-//                            bat "${tool 'CPython-3.6'} -m devpi login ${DEVPI_USERNAME} --password ${DEVPI_PASSWORD}"
-//                            bat "${tool 'CPython-3.6'} -m devpi use /${DEVPI_USERNAME}/${env.BRANCH_NAME}_staging"
-//                            bat "${tool 'CPython-3.6'} -m devpi push ${name}==${version} production/release"
-//                        }
-//                    }
-//
-//                }
-//                node("Linux"){
-//                    updateOnlineDocs url_subdomain: params.URL_SUBFOLDER, stash_name: "HTML Documentation"
-//                }
-//            }
-//        }
         stage("Deploying to Devpi") {
             when {
                 allOf{
@@ -576,7 +356,6 @@ pipeline {
                     script {
                         bat "venv\\Scripts\\devpi.exe upload --from-dir dist"
                         try {
-//                            bat "venv\\Scripts\\devpi.exe upload --only-docs"
                             bat "venv\\Scripts\\devpi.exe upload --only-docs ${WORKSPACE}\\dist\\${DOC_ZIP_FILENAME}"
                         } catch (exc) {
                             echo "Unable to upload to devpi with docs."
@@ -755,31 +534,6 @@ pipeline {
                     echo "Devpi remove exited with code ${devpi_remove_return_code}."
                 }
             }
-//            bat "dir /s / B"
         }
     }
-//    post {
-//        always {
-//            script {
-//                if(env.BRANCH_NAME == "master" || env.BRANCH_NAME == "dev") {
-//                    def name = "hathizip"
-//                    def version = bat(returnStdout: true, script: "@${tool 'CPython-3.6'} setup.py --version").trim()
-//                    echo "name == ${name}"
-//                    echo "version == ${version}"
-//                    withCredentials([usernamePassword(credentialsId: 'DS_devpi', usernameVariable: 'DEVPI_USERNAME', passwordVariable: 'DEVPI_PASSWORD')]) {
-//                        bat "${tool 'CPython-3.6'} -m devpi login ${DEVPI_USERNAME} --password ${DEVPI_PASSWORD}"
-//                        bat "${tool 'CPython-3.6'} -m devpi use /${DEVPI_USERNAME}/${env.BRANCH_NAME}_staging"
-//                        bat "${tool 'CPython-3.6'} -m devpi remove -y ${name}==${version}"
-//                    }
-//                }
-//            }
-//        }
-//        failure {
-//            echo "Build failed"
-//        }
-//        success {
-//            echo "Cleaning up workspace"
-//            deleteDir()
-//        }
-//    }
 }
