@@ -538,28 +538,58 @@ pipeline {
             }
         }
     }
-    post {
-        always {
+    post{
+        cleanup{
+
             script {
-                if(env.BRANCH_NAME == "master" || env.BRANCH_NAME == "dev") {
-                    def name = "hathizip"
-                    def version = bat(returnStdout: true, script: "@${tool 'CPython-3.6'} setup.py --version").trim()
-                    echo "name == ${name}"
-                    echo "version == ${version}"
-                    withCredentials([usernamePassword(credentialsId: 'DS_devpi', usernameVariable: 'DEVPI_USERNAME', passwordVariable: 'DEVPI_PASSWORD')]) {
-                        bat "${tool 'CPython-3.6'} -m devpi login ${DEVPI_USERNAME} --password ${DEVPI_PASSWORD}"
-                        bat "${tool 'CPython-3.6'} -m devpi use /${DEVPI_USERNAME}/${env.BRANCH_NAME}_staging"
-                        bat "${tool 'CPython-3.6'} -m devpi remove -y ${name}==${version}"
+                if(fileExists('source/setup.py')){
+                    dir("source"){
+                        try{
+                            retry(3) {
+                                bat "${WORKSPACE}\\venv\\Scripts\\python.exe setup.py clean --all"
+                            }
+                        } catch (Exception ex) {
+                            echo "Unable to successfully run clean. Purging source directory."
+                            deleteDir()
+                        }
                     }
                 }
+                bat "dir"
+                if (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "dev"){
+                    withCredentials([usernamePassword(credentialsId: 'DS_devpi', usernameVariable: 'DEVPI_USERNAME', passwordVariable: 'DEVPI_PASSWORD')]) {
+                        bat "venv\\Scripts\\devpi.exe login DS_Jenkins --password ${DEVPI_PASSWORD}"
+                        bat "venv\\Scripts\\devpi.exe use /DS_Jenkins/${env.BRANCH_NAME}_staging"
+                    }
+
+                    def devpi_remove_return_code = bat returnStatus: true, script:"venv\\Scripts\\devpi.exe remove -y ${PKG_NAME}==${PKG_VERSION}"
+                    echo "Devpi remove exited with code ${devpi_remove_return_code}."
+                }
             }
-        }
-        failure {
-            echo "Build failed"
-        }
-        success {
-            echo "Cleaning up workspace"
-            deleteDir()
+//            bat "dir /s / B"
         }
     }
+//    post {
+//        always {
+//            script {
+//                if(env.BRANCH_NAME == "master" || env.BRANCH_NAME == "dev") {
+//                    def name = "hathizip"
+//                    def version = bat(returnStdout: true, script: "@${tool 'CPython-3.6'} setup.py --version").trim()
+//                    echo "name == ${name}"
+//                    echo "version == ${version}"
+//                    withCredentials([usernamePassword(credentialsId: 'DS_devpi', usernameVariable: 'DEVPI_USERNAME', passwordVariable: 'DEVPI_PASSWORD')]) {
+//                        bat "${tool 'CPython-3.6'} -m devpi login ${DEVPI_USERNAME} --password ${DEVPI_PASSWORD}"
+//                        bat "${tool 'CPython-3.6'} -m devpi use /${DEVPI_USERNAME}/${env.BRANCH_NAME}_staging"
+//                        bat "${tool 'CPython-3.6'} -m devpi remove -y ${name}==${version}"
+//                    }
+//                }
+//            }
+//        }
+//        failure {
+//            echo "Build failed"
+//        }
+//        success {
+//            echo "Cleaning up workspace"
+//            deleteDir()
+//        }
+//    }
 }
