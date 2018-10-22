@@ -1,5 +1,6 @@
 #!groovy
 @Library("ds-utils")
+@Library("devpi") _
 import org.ds.*
 
 def PKG_NAME = "unknown"
