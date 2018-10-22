@@ -53,11 +53,6 @@ pipeline {
                             checkout scm
                         }
                     }
-                    post{
-                        success {
-                            bat "dir /s /B"
-                        }
-                    }
                 }
                 stage("Stashing important files for later"){
                     steps{
@@ -112,18 +107,7 @@ pipeline {
                             bat "venv\\Scripts\\pip.exe list > logs\\pippackages_venv_${NODE_NAME}.log"
                             archiveArtifacts artifacts: "logs/pippackages_venv_${NODE_NAME}.log"
                         }
-//                        always{
-//                            dir("logs"){
-//                                script{
-//                                    def log_files = findFiles glob: '**/pippackages_venv_*.log'
-//                                    log_files.each { log_file ->
-//                                        echo "Found ${log_file}"
-//                                        archiveArtifacts artifacts: "${log_file}"
-//                                        bat "del ${log_file}"
-//                                    }
-//                                }
-//                            }
-//                        }
+
                         failure {
                             deleteDir()
                         }
@@ -295,10 +279,8 @@ pipeline {
                     }
                     post{
                         success{
-                            dir("dist"){
-                                archiveArtifacts artifacts: "*.whl", fingerprint: true
-                                archiveArtifacts artifacts: "*.tar.gz", fingerprint: true
-                            }
+                            archiveArtifacts artifacts: "dist/*.whl,dist/*.tar.gz,dist/*.zip", fingerprint: true
+                            stash includes: 'dist/*.whl,dist/*.tar.gz,dist/*.zip', name: "dist"
                         }
                     }
                 }
@@ -309,7 +291,7 @@ pipeline {
                         }
                     }
                     when{
-                        equals expected: true, actual param.PACKAGE_CX_FREEZE
+                        equals expected: true, actual: param.PACKAGE_CX_FREEZE
                     }
                     steps{
                         bat "venv\\Scripts\\pip.exe install -r requirements.txt -r requirements-freeze.txt -r requirements-dev.txt -q"
@@ -323,7 +305,6 @@ pipeline {
                             stash includes: "dist/*.msi", name: "msi"
                             archiveArtifacts artifacts: "dist/*.msi", fingerprint: true
                             }
-                        }
                         cleanup{
                             bat "del dist\\*.msi"
                         }
