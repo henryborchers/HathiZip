@@ -287,7 +287,7 @@ pipeline {
                 }
                 stage("Windows CX_Freeze MSI"){
                     when{
-                        equals expected: true, actual: param.PACKAGE_CX_FREEZE
+                        equals expected: true, actual: params.PACKAGE_CX_FREEZE
                     }
                     steps{
                         bat "venv\\Scripts\\pip.exe install -r requirements.txt -r requirements-freeze.txt -r requirements-dev.txt -q"
