@@ -35,6 +35,7 @@ pipeline {
         booleanParam(name: "PACKAGE", defaultValue: true, description: "Create a package")
         booleanParam(name: "PACKAGE_CX_FREEZE", defaultValue: false, description: "Create a package with CX_Freeze")
         booleanParam(name: "DEPLOY_DEVPI", defaultValue: true, description: "Deploy to devpi on https://devpi.library.illinois.edu/DS_Jenkins/${env.BRANCH_NAME}")
+        booleanParam(name: "DEPLOY_DEVPI_PRODUCTION", defaultValue: false, description: "Deploy to https://devpi.library.illinois.edu/production/release")
         choice(choices: 'None\nRelease_to_devpi_only\nRelease_to_devpi_and_sccm\n', description: "Release the build to production. Only available in the Master branch", name: 'RELEASE')
         booleanParam(name: "UPDATE_DOCS", defaultValue: false, description: "Update online documentation")
         string(name: 'URL_SUBFOLDER', defaultValue: "hathi_zip", description: 'The directory that the docs should be saved under')
@@ -267,9 +268,6 @@ pipeline {
             }
         }
         stage("Packaging") {
-            when {
-                expression { params.DEPLOY_DEVPI == true || params.RELEASE != "None"}
-            }
             parallel {
                 stage("Source and Wheel formats"){
                     steps{
@@ -462,6 +460,26 @@ pipeline {
                 }
             }
         }
+        stage("Deploy to DevPi Production") {
+                    when {
+                        allOf{
+                            equals expected: true, actual: params.DEPLOY_DEVPI_PRODUCTION
+                            equals expected: true, actual: params.DEPLOY_DEVPI
+                            branch "master"
+                        }
+                    }
+                    steps {
+                        script {
+                            input "Release ${PKG_NAME} ${PKG_VERSION} to DevPi Production?"
+                            withCredentials([usernamePassword(credentialsId: 'DS_devpi', usernameVariable: 'DEVPI_USERNAME', passwordVariable: 'DEVPI_PASSWORD')]) {
+                                bat "venv\\Scripts\\devpi.exe login ${DEVPI_USERNAME} --password ${DEVPI_PASSWORD}"
+                            }
+
+                            bat "venv\\Scripts\\devpi.exe use /DS_Jenkins/${env.BRANCH_NAME}_staging"
+                            bat "venv\\Scripts\\devpi.exe push ${PKG_NAME}==${PKG_VERSION} production/release"
+                        }
+                    }
+                }
         stage("Deploy to SCCM") {
             when {
                 expression { params.RELEASE == "Release_to_devpi_and_sccm"}
