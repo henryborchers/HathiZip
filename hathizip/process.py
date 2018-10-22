@@ -58,4 +58,31 @@ def compress_folder(path, dst):
         logger.info("Generated {}".format(final_zip))
 
 
-    pass
+def compress_folder_inplace(path, dst):
+    logger = logging.getLogger(__name__)
+    logger.debug("Taking care of {}".format(path))
+
+    last_path = os.path.normcase(path).split(os.path.sep)[-1]
+    zipname = "{}.zip".format(last_path)
+
+    temp_zipname = os.path.join(dst, "processing.dat".format(last_path))
+
+    # with tempfile.TemporaryDirectory() as tf:
+    # logger.debug("Creating temp zip file {}".format(tmp_zip))
+    final_zip = os.path.join(dst, zipname)
+    with zipfile.ZipFile(temp_zipname, "w") as zipped_package:
+
+        for file, archive_name in get_files(path):
+
+            logger.debug("Writing {} as {} to {}".format(
+                file, archive_name, temp_zipname))
+            zipped_package.write(file, arcname=archive_name)
+
+            logger.info("Zipped {}".format(file))
+
+    logger.debug("Renaming {} to {}".format(temp_zipname, final_zip))
+
+    shutil.move(temp_zipname, final_zip)
+    logger.info("Generated {}".format(final_zip))
+
+
