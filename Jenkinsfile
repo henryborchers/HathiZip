@@ -108,7 +108,7 @@ pipeline {
                     }
                     post{
                         success{
-                            bat "venv\\Scripts\\pip.exe list > ${WORKSPACE}\\logs\\pippackages_venv_${NODE_NAME}.log"
+                            bat "venv\\Scripts\\pip.exe list > logs\\pippackages_venv_${NODE_NAME}.log"
                             archiveArtifacts artifacts: "logs/pippackages_venv_${NODE_NAME}.log"
                         }
 //                        always{
