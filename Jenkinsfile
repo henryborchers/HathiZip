@@ -84,7 +84,7 @@ pipeline {
                         }
                         dir("logs"){
                             deleteDir()
-                            echo "Cleaned out build directory"
+                            echo "Cleaned out logs directory"
                             bat "dir > nul"
                         }
                     }
@@ -102,9 +102,9 @@ pipeline {
                             }
                         }
                         bat "venv\\Scripts\\pip.exe install tox mypy lxml pytest pytest-cov flake8 sphinx wheel cx_freeze devpi-client --upgrade-strategy only-if-needed"
-                        dir("source"){
-                            bat "venv\\Scripts\\pip list > ..\\logs\\pippackages_pipenv_${NODE_NAME}.log"
-                            }
+//                        dir("source"){
+//                            bat "venv\\Scripts\\pip list > ${WORKSPACE}\\logs\\pippackages_pipenv_${NODE_NAME}.log"
+//                            }
                     }
                     post{
                         success{
