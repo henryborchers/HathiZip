@@ -70,17 +70,22 @@ pipeline {
                         dir("reports"){
                             deleteDir()
                             echo "Cleaned out reports directory"
-                            bat "dir"
+                            bat "dir > nul"
                         }
                         dir("dist"){
                             deleteDir()
                             echo "Cleaned out dist directory"
-                            bat "dir"
+                            bat "dir > nul"
                         }
                         dir("build"){
                             deleteDir()
                             echo "Cleaned out build directory"
-                            bat "dir"
+                            bat "dir > nul"
+                        }
+                        dir("logs"){
+                            deleteDir()
+                            echo "Cleaned out build directory"
+                            bat "dir > nul"
                         }
                     }
                 }
@@ -184,13 +189,9 @@ pipeline {
             stages{
                 stage("Python Package"){
                     steps {
-//                        tee("logs/build.log") {
                         dir("source"){
                             powershell "& ${WORKSPACE}\\venv\\Scripts\\python.exe setup.py build -b ${WORKSPACE}\\build  | tee ${WORKSPACE}\\logs\\build.log"
-//                            bat "${WORKSPACE}\\venv\\Scripts\\python.exe setup.py build -b ${WORKSPACE}\\build"
                         }
-
-//                        }
                     }
                     post{
                         always{
