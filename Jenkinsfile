@@ -32,6 +32,7 @@ pipeline {
         booleanParam(name: "UNIT_TESTS", defaultValue: true, description: "Run automated unit tests")
         booleanParam(name: "ADDITIONAL_TESTS", defaultValue: true, description: "Run additional tests")
         booleanParam(name: "PACKAGE", defaultValue: true, description: "Create a package")
+        booleanParam(name: "PACKAGE_CX_FREEZE", defaultValue: false, description: "Create a package with CX_Freeze")
         booleanParam(name: "DEPLOY_DEVPI", defaultValue: true, description: "Deploy to devpi on https://devpi.library.illinois.edu/DS_Jenkins/${env.BRANCH_NAME}")
         choice(choices: 'None\nRelease_to_devpi_only\nRelease_to_devpi_and_sccm\n', description: "Release the build to production. Only available in the Master branch", name: 'RELEASE')
         booleanParam(name: "UPDATE_DOCS", defaultValue: false, description: "Update online documentation")
@@ -307,19 +308,11 @@ pipeline {
                             label "Windows"
                         }
                     }
-                    options {
-                        skipDefaultCheckout true
+                    when{
+                        equals expected: true, actual param.PACKAGE_CX_FREEZE
                     }
                     steps{
-                        bat "dir"
-                        deleteDir()
-                        bat "dir"
-                        checkout scm
-                        bat "dir /s / B"
-                        bat "${tool 'CPython-3.6'} -m venv venv"
-                        bat "venv\\Scripts\\python.exe -m pip install -U pip>=18.0"
-                        bat "venv\\Scripts\\pip.exe install -U setuptools"
-                        bat "venv\\Scripts\\pip.exe install -r requirements.txt -r requirements-freeze.txt -r requirements-dev.txt"
+                        bat "venv\\Scripts\\pip.exe install -r requirements.txt -r requirements-freeze.txt -r requirements-dev.txt -q"
                         bat "venv\\Scripts\\python.exe cx_setup.py bdist_msi --add-to-path=true -k --bdist-dir build/msi"
                         // bat "make freeze"
 
@@ -327,15 +320,12 @@ pipeline {
                     }
                     post{
                         success{
-                            dir("dist") {
-                                stash includes: "*.msi", name: "msi"
-                                archiveArtifacts artifacts: "*.msi", fingerprint: true
+                            stash includes: "dist/*.msi", name: "msi"
+                            archiveArtifacts artifacts: "dist/*.msi", fingerprint: true
                             }
                         }
                         cleanup{
-                            bat "dir"
-                            deleteDir()
-                            bat "dir"
+                            bat "del dist\\*.msi"
                         }
                     }
                 }
