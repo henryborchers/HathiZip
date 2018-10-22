@@ -285,11 +285,6 @@ pipeline {
                     }
                 }
                 stage("Windows CX_Freeze MSI"){
-                    agent{
-                        node {
-                            label "Windows"
-                        }
-                    }
                     when{
                         equals expected: true, actual: param.PACKAGE_CX_FREEZE
                     }
