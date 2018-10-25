@@ -416,6 +416,8 @@ pipeline {
                         skipDefaultCheckout()
                     }
                     steps {
+                        bat "${tool 'CPython-3.6'} -m venv venv"
+                        bat "venv\\Scripts\\pip.exe install tox devpi-client"
                         devpiTest(
                             devpiExecutable: "venv\\Scripts\\devpi.exe",
                             url: "https://devpi.library.illinois.edu",
@@ -425,8 +427,6 @@ pipeline {
                             pkgRegex: "whl"
                         )
 //                        echo "Testing Whl package in devpi"
-//                        bat "${tool 'CPython-3.6'} -m venv venv"
-//                        bat "venv\\Scripts\\pip.exe install tox devpi-client"
 //                        withCredentials([usernamePassword(credentialsId: 'DS_devpi', usernameVariable: 'DEVPI_USERNAME', passwordVariable: 'DEVPI_PASSWORD')]) {
 //                            bat "venv\\Scripts\\devpi.exe login ${DEVPI_USERNAME} --password ${DEVPI_PASSWORD}"
 //                        }
