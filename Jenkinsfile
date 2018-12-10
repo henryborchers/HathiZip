@@ -89,13 +89,13 @@ pipeline {
                 }
                 stage("Creating virtualenv for building"){
                     steps{
-                        bat "${tool 'CPython-3.6'} -m venv venv"
+                        bat "${tool 'CPython-3.6'}\\python -m venv venv"
                         script {
                             try {
                                 bat "call venv\\Scripts\\python.exe -m pip install -U pip>=18.0"
                             }
                             catch (exc) {
-                                bat "${tool 'CPython-3.6'} -m venv venv"
+                                bat "${tool 'CPython-3.6'}\\python -m venv venv"
                                 bat "call venv\\Scripts\\python.exe -m pip install -U pip>=18.0 --no-cache-dir"
                             }
                         }
@@ -122,8 +122,8 @@ pipeline {
                             // Set up the reports directory variable
                             REPORT_DIR = "${pwd tmp: true}\\reports"
                            dir("source"){
-                                PKG_NAME = bat(returnStdout: true, script: "@${tool 'CPython-3.6'}  setup.py --name").trim()
-                                PKG_VERSION = bat(returnStdout: true, script: "@${tool 'CPython-3.6'} setup.py --version").trim()
+                                PKG_NAME = bat(returnStdout: true, script: "@${tool 'CPython-3.6'}\\python  setup.py --name").trim()
+                                PKG_VERSION = bat(returnStdout: true, script: "@${tool 'CPython-3.6'}\\python setup.py --version").trim()
                            }
                         }
 
@@ -416,7 +416,7 @@ pipeline {
                         skipDefaultCheckout()
                     }
                     steps {
-                        bat "${tool 'CPython-3.6'} -m venv venv"
+                        bat "${tool 'CPython-3.6'}\\python -m venv venv"
                         bat "venv\\Scripts\\pip.exe install tox devpi-client"
                         devpiTest(
                             devpiExecutable: "venv\\Scripts\\devpi.exe",
