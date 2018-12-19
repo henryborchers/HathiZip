@@ -266,6 +266,13 @@ pipeline {
                             junit "junit-${env.NODE_NAME}-mypy.xml"
                             publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, keepAll: false, reportDir: 'reports/mypy_html', reportFiles: 'index.html', reportName: 'MyPy', reportTitles: ''])
                         }
+                        cleanup{
+                            cleanWs deleteDirs: true, patterns: [
+                                [pattern: 'source*', type: 'INCLUDE'],
+                                [pattern: '*.xml', type: 'INCLUDE']
+                                ]
+
+                        }
                     }
                 }
             }
