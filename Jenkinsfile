@@ -34,7 +34,7 @@ pipeline {
         booleanParam(name: "ADDITIONAL_TESTS", defaultValue: true, description: "Run additional tests")
         booleanParam(name: "PACKAGE", defaultValue: true, description: "Create a package")
         booleanParam(name: "PACKAGE_CX_FREEZE", defaultValue: false, description: "Create a package with CX_Freeze")
-        booleanParam(name: "DEPLOY_DEVPI", defaultValue: true, description: "Deploy to devpi on https://devpi.library.illinois.edu/DS_Jenkins/${env.BRANCH_NAME}")
+        booleanParam(name: "DEPLOY_DEVPI", defaultValue: false, description: "Deploy to devpi on https://devpi.library.illinois.edu/DS_Jenkins/${env.BRANCH_NAME}")
         booleanParam(name: "DEPLOY_DEVPI_PRODUCTION", defaultValue: false, description: "Deploy to https://devpi.library.illinois.edu/production/release")
         choice(choices: 'None\nRelease_to_devpi_only\nRelease_to_devpi_and_sccm\n', description: "Release the build to production. Only available in the Master branch", name: 'RELEASE')
         booleanParam(name: "UPDATE_DOCS", defaultValue: false, description: "Update online documentation")
@@ -45,7 +45,10 @@ pipeline {
             stages{
                 stage("Purge all existing data in workspace"){
                     when{
-                        equals expected: true, actual: params.FRESH_WORKSPACE
+                        anyOf{
+                            equals expected: true, actual: params.FRESH_WORKSPACE
+                            triggeredBy "TimerTriggerCause"
+                        }
                     }
                     steps {
                         deleteDir()
@@ -263,6 +266,12 @@ pipeline {
                             junit "junit-${env.NODE_NAME}-mypy.xml"
                             publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, keepAll: false, reportDir: 'reports/mypy_html', reportFiles: 'index.html', reportName: 'MyPy', reportTitles: ''])
                         }
+                        cleanup{
+                            cleanWs deleteDirs: true, patterns: [
+                                [pattern: '*mypy.xml', type: 'INCLUDE']
+                                ]
+
+                        }
                     }
                 }
             }
@@ -309,7 +318,10 @@ pipeline {
         stage("Deploying to Devpi") {
             when {
                 allOf{
-                    equals expected: true, actual: params.DEPLOY_DEVPI
+                    anyOf{
+                        equals expected: true, actual: params.DEPLOY_DEVPI
+                        triggeredBy "TimerTriggerCause"
+                    }
                     anyOf {
                         equals expected: "master", actual: env.BRANCH_NAME
                         equals expected: "dev", actual: env.BRANCH_NAME
@@ -336,7 +348,10 @@ pipeline {
         stage("Test Devpi packages") {
             when {
                 allOf{
-                    equals expected: true, actual: params.DEPLOY_DEVPI
+                    anyOf{
+                        equals expected: true, actual: params.DEPLOY_DEVPI
+                        triggeredBy "TimerTriggerCause"
+                    }
                     anyOf {
                         equals expected: "master", actual: env.BRANCH_NAME
                         equals expected: "dev", actual: env.BRANCH_NAME
@@ -377,39 +392,22 @@ pipeline {
                     }
 
                 }
-                stage("Source Distribution: .zip") {
-                    steps {
-                        devpiTest(
-                            devpiExecutable: "venv\\Scripts\\devpi.exe",
-                            url: "https://devpi.library.illinois.edu",
-                            index: "${env.BRANCH_NAME}_staging",
-                            pkgName: "${PKG_NAME}",
-                            pkgVersion: "${PKG_VERSION}",
-                            pkgRegex: "zip"
-                        )
-//                        echo "Testing Source zip package in devpi"
-//                        withCredentials([usernamePassword(credentialsId: 'DS_devpi', usernameVariable: 'DEVPI_USERNAME', passwordVariable: 'DEVPI_PASSWORD')]) {
-//                            bat "venv\\Scripts\\devpi.exe login ${DEVPI_USERNAME} --password ${DEVPI_PASSWORD}"
-//                        }
-//                        bat "venv\\Scripts\\devpi.exe use /DS_Jenkins/${env.BRANCH_NAME}_staging"
-//                        script {
-//                            def devpi_test_return_code = bat returnStatus: true, script: "venv\\Scripts\\devpi.exe test --index https://devpi.library.illinois.edu/DS_Jenkins/${env.BRANCH_NAME}_staging ${PKG_NAME} -s zip --verbose"
-//                            if(devpi_test_return_code != 0){
-//                                error "Devpi exit code for zip was ${devpi_test_return_code}"
-//                            }
-//                        }
-//                        echo "Finished testing Source Distribution: .zip"
-                    }
-                    post {
-                        failure {
-                            echo "Tests for .zip source on DevPi failed."
-                        }
-                    }
-                }
                 stage("Built Distribution: .whl") {
                     agent {
                         node {
                             label "Windows && Python3"
+                        }
+                    }
+                    when {
+                        allOf{
+                            anyOf{
+                                equals expected: true, actual: params.DEPLOY_DEVPI
+                                triggeredBy "TimerTriggerCause"
+                            }
+                            anyOf {
+                                equals expected: "master", actual: env.BRANCH_NAME
+                                equals expected: "dev", actual: env.BRANCH_NAME
+                            }
                         }
                     }
                     options {
@@ -442,6 +440,11 @@ pipeline {
                     post {
                         failure {
                             echo "Tests for whl on DevPi failed."
+                        }
+                        cleanup{
+                            cleanWs deleteDirs: true, patterns: [
+                                [pattern: 'certs', type: 'INCLUDE']
+                            ]
                         }
                     }
                 }
@@ -546,6 +549,14 @@ pipeline {
                     echo "Devpi remove exited with code ${devpi_remove_return_code}."
                 }
             }
+            cleanWs deleteDirs: true, patterns: [
+                    [pattern: 'build*', type: 'INCLUDE'],
+                    [pattern: 'certs', type: 'INCLUDE'],
+                    [pattern: 'dist*', type: 'INCLUDE'],
+                    [pattern: 'logs*', type: 'INCLUDE'],
+                    [pattern: 'reports*', type: 'INCLUDE'],
+                    [pattern: '*@temp', type: 'INCLUDE']
+                    ]
         }
     }
 }
