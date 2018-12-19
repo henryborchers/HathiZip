@@ -268,8 +268,7 @@ pipeline {
                         }
                         cleanup{
                             cleanWs deleteDirs: true, patterns: [
-                                [pattern: 'source*', type: 'INCLUDE'],
-                                [pattern: '*.xml', type: 'INCLUDE']
+                                [pattern: '*mypy.xml', type: 'INCLUDE']
                                 ]
 
                         }
