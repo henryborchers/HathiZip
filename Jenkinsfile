@@ -404,6 +404,11 @@ pipeline {
                         failure {
                             echo "Tests for .zip source on DevPi failed."
                         }
+                        cleanup{
+                            cleanWs deleteDirs: true, patterns: [
+                                [pattern: 'certs', type: 'INCLUDE']
+                            ]
+                        }
                     }
                 }
                 stage("Built Distribution: .whl") {
@@ -442,6 +447,11 @@ pipeline {
                     post {
                         failure {
                             echo "Tests for whl on DevPi failed."
+                        }
+                        cleanup{
+                            cleanWs deleteDirs: true, patterns: [
+                                [pattern: 'certs', type: 'INCLUDE']
+                            ]
                         }
                     }
                 }
