@@ -283,8 +283,10 @@ pipeline {
                         equals expected: true, actual: params.PACKAGE_CX_FREEZE
                     }
                     steps{
-                        bat "venv\\Scripts\\pip.exe install -r requirements.txt -r requirements-freeze.txt -r requirements-dev.txt -q"
-                        bat "venv\\Scripts\\python.exe cx_setup.py bdist_msi --add-to-path=true -k --bdist-dir build/msi"
+                        bat "venv\\Scripts\\pip.exe install -r source\\requirements.txt -r source\\requirements-freeze.txt -r source\\requirements-dev.txt -q"
+                        dir("source"){
+                            bat "${WORKSPACE}\\venv\\Scripts\\python.exe cx_setup.py bdist_msi --add-to-path=true -k --bdist-dir ${WORKSPACE}/build/msi -d ${WORKSPACE}/dist"
+                        }
 
 
                     }
