@@ -120,7 +120,12 @@ pipeline {
                     }
                     post{
                         always{
-                            warnings canRunOnFailed: true, parserConfigurations: [[parserName: 'Pep8', pattern: 'logs/build.log']]
+                            recordIssues(tools: [
+                                        pyLint(name: 'Setuptools Build: PyLint', pattern: 'logs/build.log'),
+                                    ]
+                                )
+
+//                            warnings canRunOnFailed: true, parserConfigurations: [[parserName: 'Pep8', pattern: 'logs/build.log']]
                             archiveArtifacts artifacts: "logs/build.log"
                         }
                     }
