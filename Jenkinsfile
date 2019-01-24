@@ -220,7 +220,7 @@ pipeline {
                     post{
                         always {
                             junit "reports/mypy/junit-${env.NODE_NAME}-mypy.xml"
-                            publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, keepAll: false, reportDir: 'reports/mypy_html', reportFiles: 'index.html', reportName: 'MyPy', reportTitles: ''])
+                            publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, keepAll: false, reportDir: 'reports/mypy/mypy_html', reportFiles: 'index.html', reportName: 'MyPy', reportTitles: ''])
                             recordIssues(tools: [myPy(name: 'MyPy', pattern: 'logs/mypy.log')])
                         }
                         cleanup{
