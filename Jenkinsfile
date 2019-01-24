@@ -360,7 +360,7 @@ pipeline {
                                 }
                                 stage("Testing DevPi zip Package"){
                                     options{
-                                        timeout(20)
+                                        timeout(10)
                                     }
                                     environment {
                                         PATH = "${WORKSPACE}\\venv\\Scripts;$PATH"
