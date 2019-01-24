@@ -671,7 +671,7 @@ pipeline {
                     [pattern: 'dist*', type: 'INCLUDE'],
                     [pattern: 'logs*', type: 'INCLUDE'],
                     [pattern: 'reports*', type: 'INCLUDE'],
-                    [pattern: '*@temp', type: 'INCLUDE']
+                    [pattern: '*tmp', type: 'INCLUDE']
                     ]
         }
     }
