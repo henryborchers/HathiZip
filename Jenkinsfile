@@ -89,7 +89,7 @@ pipeline {
                                 bat "call venv\\Scripts\\python.exe -m pip install -U pip>=18.0 --no-cache-dir"
                             }
                         }
-                        bat "venv\\Scripts\\pip.exe install tox mypy lxml pytest pytest-cov flake8 sphinx wheel devpi-client --upgrade-strategy only-if-needed"
+                        bat "venv\\Scripts\\pip.exe install tox mypy lxml pytest pytest-cov flake8 sphinx wheel --upgrade-strategy only-if-needed"
                     }
                     post{
                         success{
@@ -318,6 +318,11 @@ pipeline {
             }
 
             stages{
+                stage("Install DevPi Client"){
+                    steps{
+                        bat "pip install devpi-client"
+                    }
+                }
                 stage("Uploading to DevPi Staging"){
                     steps {
                         unstash "DOCS_ARCHIVE"
