@@ -211,7 +211,7 @@ pipeline {
                         equals expected: true, actual: params.TEST_RUN_MYPY
                     }
                     steps{
-                        bat "if not exist reports\\mypy mkdir reports\\mypy"
+                        bat "if not exist reports\\mypy\\mypy_html mkdir reports\\mypy\\mypy_html"
                         dir("source") {
                             bat returnStatus: true, script: "mypy.exe -p hathizip --junit-xml=${WORKSPACE}/reports/mypy/junit-${env.NODE_NAME}-mypy.xml --html-report ${WORKSPACE}/reports/mypy/mypy_html > ${WORKSPACE}\\logs\\mypy.log"
 //                            bat "mypy.exe -p hathizip --junit-xml=${WORKSPACE}/junit-${env.NODE_NAME}-mypy.xml --html-report ${WORKSPACE}/reports/mypy_html"
