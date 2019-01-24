@@ -275,7 +275,7 @@ pipeline {
                 stage("Source and Wheel formats"){
                     steps{
                         dir("source"){
-                            bat "${WORKSPACE}\\venv\\scripts\\python.exe setup.py sdist -d ${WORKSPACE}\\dist bdist_wheel -d ${WORKSPACE}\\dist"
+                            bat "${WORKSPACE}\\venv\\scripts\\python.exe setup.py sdist --format zip -d ${WORKSPACE}\\dist bdist_wheel -d ${WORKSPACE}\\dist"
                         }
 
                     }
@@ -345,7 +345,7 @@ pipeline {
                 }
                 stage("Test Devpi packages") {
                     parallel {
-                        stage("Source Distribution: .tar.gz") {
+                        stage("Source Distribution: .zip") {
                             steps {
                                 devpiTest(
                                     devpiExecutable: "venv\\Scripts\\devpi.exe",
@@ -353,7 +353,7 @@ pipeline {
                                     index: "${env.BRANCH_NAME}_staging",
                                     pkgName: "${env.PKG_NAME}",
                                     pkgVersion: "${env.PKG_VERSION}",
-                                    pkgRegex: "tar.gz"
+                                    pkgRegex: "zip"
                                 )
         //                        echo "Testing Source tar.gz package in devpi"
         //                        withCredentials([usernamePassword(credentialsId: 'DS_devpi', usernameVariable: 'DEVPI_USERNAME', passwordVariable: 'DEVPI_PASSWORD')]) {
