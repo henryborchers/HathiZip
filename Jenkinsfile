@@ -122,11 +122,18 @@ pipeline {
                             archiveArtifacts artifacts: "logs/pippackages_venv_${NODE_NAME}.log"
                         }
 
-                        failure {
-                            deleteDir()
-                        }
+
                     }
                 }
+            }
+            post{
+                success{
+                    echo "Configured ${env.PKG_NAME}, version ${env.PKG_VERSION}, for testing."
+                }
+                failure {
+                    deleteDir()
+                }
+
             }
         }
 
