@@ -43,6 +43,7 @@ pipeline {
         string(name: "PROJECT_NAME", defaultValue: "HathiTrust Zip for Submit", description: "Name given to the project")
         booleanParam(name: "FRESH_WORKSPACE", defaultValue: false, description: "Purge workspace before staring and checking out source")
         booleanParam(name: "ADDITIONAL_TESTS", defaultValue: true, description: "Run additional tests")
+        booleanParam(name: "TEST_RUN_DOCTEST", defaultValue: true, description: "Test documentation")
         booleanParam(name: "TEST_RUN_PYTEST", defaultValue: true, description: "Run unit tests with PyTest")
         booleanParam(name: "TEST_RUN_MYPY", defaultValue: true, description: "Run MyPy static analysis")
         booleanParam(name: "TEST_RUN_FLAKE8", defaultValue: true, description: "Run Flake8 Tests")
@@ -50,7 +51,8 @@ pipeline {
         booleanParam(name: "PACKAGE_CX_FREEZE", defaultValue: false, description: "Create a package with CX_Freeze")
         booleanParam(name: "DEPLOY_DEVPI", defaultValue: true, description: "Deploy to devpi on https://devpi.library.illinois.edu/DS_Jenkins/${env.BRANCH_NAME}")
         booleanParam(name: "DEPLOY_DEVPI_PRODUCTION", defaultValue: false, description: "Deploy to https://devpi.library.illinois.edu/production/release")
-        choice(choices: 'None\nRelease_to_devpi_only\nRelease_to_devpi_and_sccm\n', description: "Release the build to production. Only available in the Master branch", name: 'RELEASE')
+        booleanParam(name: "DEPLOY_SCCM", defaultValue: true, description: "Deploy to SCCM")
+//        choice(choices: 'None\nRelease_to_devpi_only\nRelease_to_devpi_and_sccm\n', description: "Release the build to production. Only available in the Master branch", name: 'RELEASE')
         booleanParam(name: "UPDATE_DOCS", defaultValue: false, description: "Update online documentation")
         string(name: 'URL_SUBFOLDER', defaultValue: "hathi_zip", description: 'The directory that the docs should be saved under')
     }
@@ -195,7 +197,7 @@ pipeline {
                 }
                 stage("Documentation"){
                     when{
-                        equals expected: true, actual: params.ADDITIONAL_TESTS
+                        equals expected: true, actual: params.TEST_RUN_DOCTEST
                     }
                     steps{
                         dir("source"){
@@ -496,8 +498,11 @@ pipeline {
         }
 
         stage("Deploy to SCCM") {
-            when {
-                expression { params.RELEASE == "Release_to_devpi_and_sccm"}
+            when{
+                allOf{
+                    equals expected: true, actual: params.DEPLOY_SCCM
+                    branch "master"
+                }
             }
 
             steps {
