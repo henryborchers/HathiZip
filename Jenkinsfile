@@ -44,6 +44,7 @@ pipeline {
         booleanParam(name: "ADDITIONAL_TESTS", defaultValue: true, description: "Run additional tests")
         booleanParam(name: "TEST_RUN_PYTEST", defaultValue: true, description: "Run unit tests with PyTest")
         booleanParam(name: "TEST_RUN_MYPY", defaultValue: true, description: "Run MyPy static analysis")
+        booleanParam(name: "TEST_RUN_FLAKE8", defaultValue: true, description: "Run Flake8 Tests")
         booleanParam(name: "PACKAGE", defaultValue: true, description: "Create a package")
         booleanParam(name: "PACKAGE_CX_FREEZE", defaultValue: false, description: "Create a package with CX_Freeze")
         booleanParam(name: "DEPLOY_DEVPI", defaultValue: true, description: "Deploy to devpi on https://devpi.library.illinois.edu/DS_Jenkins/${env.BRANCH_NAME}")
@@ -220,10 +221,39 @@ pipeline {
                             recordIssues(tools: [myPy(name: 'MyPy', pattern: 'logs/mypy.log')])
                         }
                         cleanup{
-                            cleanWs deleteDirs: true, patterns: [
-                                [pattern: '*mypy.xml', type: 'INCLUDE']
-                                ]
+                            cleanWs(
+                                deleteDirs: true,
+                                patterns: [
+                                        [pattern: 'reports/mypy', type: 'INCLUDE']
+                                    ]
+                                )
 
+                        }
+                    }
+                }
+                stage("Run Flake8 Static Analysis") {
+                    when {
+                        equals expected: true, actual: params.TEST_RUN_FLAKE8
+                    }
+                    steps{
+                        script{
+                            bat "pip install flake8"
+                            try{
+                                dir("source"){
+                                    bat "flake8 pyhathiprep --tee --output-file=${WORKSPACE}\\logs\\flake8.log"
+                                }
+                            } catch (exc) {
+                                echo "flake8 found some warnings"
+                            }
+                        }
+                    }
+                    post {
+                        always {
+
+                            recordIssues(tools: [flake8(name: 'Flake8', pattern: 'logs/flake8.log')])
+                        }
+                        cleanup{
+                            cleanWs(patterns: [[pattern: 'logs/flake8.log', type: 'INCLUDE']])
                         }
                     }
                 }
