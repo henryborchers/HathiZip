@@ -1,8 +1,24 @@
 #!groovy
 @Library("ds-utils")
-@Library("devpi") _
 import org.ds.*
 
+@Library(["devpi", "PythonHelpers"]) _
+
+def remove_from_devpi(devpiExecutable, pkgName, pkgVersion, devpiIndex, devpiUsername, devpiPassword){
+    script {
+                try {
+                    bat "${devpiExecutable} login ${devpiUsername} --password ${devpiPassword}"
+                    bat "${devpiExecutable} use ${devpiIndex}"
+                    bat "${devpiExecutable} remove -y ${pkgName}==${pkgVersion}"
+                } catch (Exception ex) {
+                    echo "Failed to remove ${pkgName}==${pkgVersion} from ${devpiIndex}"
+            }
+
+    }
+}
+
+
+// TODO: replace global vars for env vars
 def PKG_NAME = "unknown"
 def PKG_VERSION = "unknown"
 def DOC_ZIP_FILENAME = "doc.zip"
@@ -22,6 +38,11 @@ pipeline {
         checkoutToSubdirectory("source")
     }
     environment {
+        PATH = "${tool 'CPython-3.6'};${tool 'CPython-3.7'};$PATH"
+        PKG_NAME = pythonPackageName(toolName: "CPython-3.6")
+        PKG_VERSION = pythonPackageVersion(toolName: "CPython-3.6")
+        DOC_ZIP_FILENAME = "${env.PKG_NAME}-${env.PKG_VERSION}.doc.zip"
+        DEVPI = credentials("DS_devpi")
         mypy_args = "--junit-xml=mypy.xml"
         pytest_args = "--junitxml=reports/junit-{env:OS:UNKNOWN_OS}-{envname}.xml --junit-prefix={env:OS:UNKNOWN_OS}  --basetemp={envtmpdir}"
     }
@@ -52,8 +73,6 @@ pipeline {
                     }
                     steps {
                         deleteDir()
-                        bat "dir"
-                        echo "Cloning source"
                         dir("source"){
                             checkout scm
                         }
@@ -66,30 +85,30 @@ pipeline {
                         }
                     }
                 }
-                stage("Cleanup extra dirs"){
-                    steps{
-                        dir("reports"){
-                            deleteDir()
-                            echo "Cleaned out reports directory"
-                            bat "dir > nul"
-                        }
-                        dir("dist"){
-                            deleteDir()
-                            echo "Cleaned out dist directory"
-                            bat "dir > nul"
-                        }
-                        dir("build"){
-                            deleteDir()
-                            echo "Cleaned out build directory"
-                            bat "dir > nul"
-                        }
-                        dir("logs"){
-                            deleteDir()
-                            echo "Cleaned out logs directory"
-                            bat "dir > nul"
-                        }
-                    }
-                }
+//                stage("Cleanup extra dirs"){
+//                    steps{
+//                        dir("reports"){
+//                            deleteDir()
+//                            echo "Cleaned out reports directory"
+//                            bat "dir > nul"
+//                        }
+//                        dir("dist"){
+//                            deleteDir()
+//                            echo "Cleaned out dist directory"
+//                            bat "dir > nul"
+//                        }
+//                        dir("build"){
+//                            deleteDir()
+//                            echo "Cleaned out build directory"
+//                            bat "dir > nul"
+//                        }
+//                        dir("logs"){
+//                            deleteDir()
+//                            echo "Cleaned out logs directory"
+//                            bat "dir > nul"
+//                        }
+//                    }
+//                }
                 stage("Creating virtualenv for building"){
                     steps{
                         bat "${tool 'CPython-3.6'}\\python -m venv venv"
@@ -315,6 +334,7 @@ pipeline {
                 }
             }
         }
+//        TODO: make devpi a seq stage
         stage("Deploying to Devpi") {
             when {
                 allOf{
@@ -539,6 +559,7 @@ pipeline {
                     }
                 }
                 bat "dir"
+//                TODO: Put at end of devpi stage
                 if (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "dev"){
                     withCredentials([usernamePassword(credentialsId: 'DS_devpi', usernameVariable: 'DEVPI_USERNAME', passwordVariable: 'DEVPI_PASSWORD')]) {
                         bat "venv\\Scripts\\devpi.exe login DS_Jenkins --password ${DEVPI_PASSWORD}"
@@ -550,7 +571,7 @@ pipeline {
                 }
             }
             cleanWs deleteDirs: true, patterns: [
-                    [pattern: 'build*', type: 'INCLUDE'],
+//                    [pattern: 'build*', type: 'INCLUDE'],
                     [pattern: 'certs', type: 'INCLUDE'],
                     [pattern: 'dist*', type: 'INCLUDE'],
                     [pattern: 'logs*', type: 'INCLUDE'],
