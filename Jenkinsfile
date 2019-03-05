@@ -556,7 +556,7 @@ pipeline {
 //                }
 //            }
             cleanWs deleteDirs: true, patterns: [
-//                    [pattern: 'build*', type: 'INCLUDE'],
+                    [pattern: 'source', type: 'INCLUDE'],
                     [pattern: 'certs', type: 'INCLUDE'],
                     [pattern: 'dist*', type: 'INCLUDE'],
                     [pattern: 'logs*', type: 'INCLUDE'],
