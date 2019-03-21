@@ -1,21 +1,17 @@
 import os
 import sys
 from setuptools.config import read_configuration
-
+import re
 import cx_Freeze
 import pytest
 import platform
-
-# metadata = dict()
-# metadata_file = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'hathizip', '__version__.py')
-# with open(metadata_file, 'r', encoding='utf-8') as f:
-#     exec(f.read(), metadata)
-
 
 
 def get_project_metadata():
     path = os.path.abspath(os.path.join(os.path.dirname(__file__), "setup.cfg"))
     return read_configuration(path)["metadata"]
+
+
 metadata = get_project_metadata()
 
 
@@ -93,11 +89,14 @@ build_exe_options = {
 
 }
 
+version_extractor = re.compile(r"\d+[.]\d+[.]\d+")
+version = version_extractor.search(metadata['version']).group(0)
+
 target_name = "hathizip.exe" if platform.system() == "Windows" else "hathizip"
 cx_Freeze.setup(
     name="Hathi Zip for Submit",
     description=metadata['description'],
-    version=metadata['version'],
+    version=version,
     license=metadata['license'],
     author=metadata['author'],
     author_email=metadata['author_email'],
