@@ -17,7 +17,7 @@ include requirements.txt
 include requirements-dev.txt
 
 # Freeze requirements
-requirements-freeze.txt
+include requirements-freeze.txt
 
 recursive-include tests *.py
 
