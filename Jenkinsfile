@@ -46,6 +46,7 @@ pipeline {
         booleanParam(name: "TEST_RUN_PYTEST", defaultValue: true, description: "Run unit tests with PyTest")
         booleanParam(name: "TEST_RUN_MYPY", defaultValue: true, description: "Run MyPy static analysis")
         booleanParam(name: "TEST_RUN_FLAKE8", defaultValue: true, description: "Run Flake8 Tests")
+        booleanParam(name: "TEST_RUN_TOX", defaultValue: true, description: "Run Tox Tests")
         booleanParam(name: "PACKAGE_CX_FREEZE", defaultValue: false, description: "Create a package with CX_Freeze")
         booleanParam(name: "DEPLOY_DEVPI", defaultValue: false, description: "Deploy to devpi on https://devpi.library.illinois.edu/DS_Jenkins/${env.BRANCH_NAME}")
         booleanParam(name: "DEPLOY_DEVPI_PRODUCTION", defaultValue: false, description: "Deploy to https://devpi.library.illinois.edu/production/release")
@@ -254,6 +255,25 @@ pipeline {
                         }
                         cleanup{
                             cleanWs(patterns: [[pattern: 'logs/flake8.log', type: 'INCLUDE']])
+                        }
+                    }
+                }
+                stage("Run Tox"){
+                    environment{
+                        PATH = "${tool 'CPython-3.6'};${tool 'CPython-3.7'};$PATH"
+                    }
+                    when{
+                        equals expected: true, actual: params.TEST_RUN_TOX
+                    }
+                    steps {
+                        dir("source"){
+                            script{
+                                try{
+                                    bat "tox --parallel=auto --parallel-live --workdir ${WORKSPACE}\\.tox -vv"
+                                } catch (exc) {
+                                    bat "tox --parallel=auto --parallel-live --workdir ${WORKSPACE}\\.tox --recreate -vv"
+                                }
+                            }
                         }
                     }
                 }
