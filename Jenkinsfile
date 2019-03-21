@@ -172,7 +172,7 @@ pipeline {
                     }
                     steps{
                         dir("source"){
-                            bat "pytest.exe --junitxml=${WORKSPACE}/reports/junit-${env.NODE_NAME}-pytest.xml --junit-prefix=${env.NODE_NAME}-pytest --cov-report html:${WORKSPACE}/reports/coverage/ --cov=hathizip" //  --basetemp={envtmpdir}"
+                            bat "python -m pytest --junitxml=${WORKSPACE}/reports/junit-${env.NODE_NAME}-pytest.xml --junit-prefix=${env.NODE_NAME}-pytest --cov-report html:${WORKSPACE}/reports/coverage/ --cov=hathizip" //  --basetemp={envtmpdir}"
                         }
 
                     }
