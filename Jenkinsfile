@@ -90,7 +90,7 @@ pipeline {
                                 bat "call venv\\Scripts\\python.exe -m pip install -U pip>=18.0 --no-cache-dir"
                             }
                         }
-                        bat "venv\\Scripts\\pip.exe install tox mypy lxml pytest pytest-cov flake8 sphinx wheel --upgrade-strategy only-if-needed"
+                        bat 'venv\\Scripts\\pip.exe install "tox<3.8" mypy lxml pytest pytest-cov flake8 sphinx wheel --upgrade-strategy only-if-needed'
                     }
                     post{
                         success{
@@ -269,10 +269,42 @@ pipeline {
                         dir("source"){
                             script{
                                 try{
-                                    bat "tox --parallel=auto --parallel-live --workdir ${WORKSPACE}\\.tox -vv"
+                                    bat (
+                                        label: "Run Tox",
+                                        script: "tox --parallel=auto --parallel-live --workdir ${WORKSPACE}\\.tox -v --result-json=${WORKSPACE}\\logs\\tox_report.json"
+                                    )
                                 } catch (exc) {
-                                    bat "tox --parallel=auto --parallel-live --workdir ${WORKSPACE}\\.tox --recreate -vv"
+                                    bat (
+                                        label: "Run Tox with new environments",
+                                        script: "tox --recreate --parallel=auto --parallel-live --workdir ${WORKSPACE}\\.tox -v --result-json=${WORKSPACE}\\logs\\tox_report.json"
+                                    )
                                 }
+                            }
+                        }
+//                        dir("source"){
+//                            script{
+//                                try{
+//                                    bat "tox --parallel=auto --parallel-live --workdir ${WORKSPACE}\\.tox -vv"
+//                                } catch (exc) {
+//                                    bat "tox --parallel=auto --parallel-live --workdir ${WORKSPACE}\\.tox --recreate -vv"
+//                                }
+//                            }
+//                        }
+                    }
+                    post{
+                        always{
+                            archiveArtifacts allowEmptyArchive: true, artifacts: '.tox/py*/log/*.log,.tox/log/*.log,logs/tox_report.json'
+                        }
+                        cleanup{
+                            cleanWs deleteDirs: true, patterns: [
+                                [pattern: '.tox/py*/log/*.log', type: 'INCLUDE'],
+                                [pattern: '.tox/log/*.log', type: 'INCLUDE'],
+                                [pattern: 'logs/rox_report.json', type: 'INCLUDE']
+                            ]
+                        }
+                        failure {
+                            dir("${WORKSPACE}\\.tox"){
+                                deleteDir()
                             }
                         }
                     }
