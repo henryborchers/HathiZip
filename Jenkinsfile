@@ -27,15 +27,11 @@ pipeline {
         timeout(60)  // Timeout after 60 minutes. This shouldn't take this long but it hangs for some reason
         checkoutToSubdirectory("source")
     }
-    environment {
-        //PATH = "${tool 'CPython-3.6'};${tool 'CPython-3.7'};$PATH"
-        PKG_NAME = pythonPackageName(toolName: "CPython-3.6")
-        PKG_VERSION = pythonPackageVersion(toolName: "CPython-3.6")
-        DOC_ZIP_FILENAME = "${env.PKG_NAME}-${env.PKG_VERSION}.doc.zip"
-        DEVPI = credentials("DS_devpi")
-        mypy_args = "--junit-xml=mypy.xml"
-        pytest_args = "--junitxml=reports/junit-{env:OS:UNKNOWN_OS}-{envname}.xml --junit-prefix={env:OS:UNKNOWN_OS}  --basetemp={envtmpdir}"
-    }
+//    environment {
+////        DEVPI = credentials("DS_devpi")
+////        mypy_args = "--junit-xml=mypy.xml"
+////        pytest_args = "--junitxml=reports/junit-{env:OS:UNKNOWN_OS}-{envname}.xml --junit-prefix={env:OS:UNKNOWN_OS}  --basetemp={envtmpdir}"
+//    }
     triggers {
         cron('@daily')
     }
@@ -68,9 +64,22 @@ pipeline {
                     }
                 }
                 stage("Stashing important files for later"){
+                    environment{
+                        PATH = "${tool 'CPython-3.7'};$PATH"
+                    }
                     steps{
                         dir("source"){
-                            stash includes: 'deployment.yml', name: "Deployment"
+
+                            bat "python setup.py dist_info"
+                        }
+                    }
+                    post{
+                        success{
+                            dir("source"){
+                                stash includes: "HathiZip.dist-info/**", name: 'DIST-INFO'
+                                archiveArtifacts artifacts: "HathiZip.dist-info/**"
+                                stash includes: 'deployment.yml', name: "Deployment"
+                            }
                         }
                     }
                 }
@@ -102,9 +111,6 @@ pipeline {
                 }
             }
             post{
-                success{
-                    echo "Configured ${env.PKG_NAME}, version ${env.PKG_VERSION}, for testing."
-                }
                 failure {
                     deleteDir()
                 }
@@ -117,7 +123,7 @@ pipeline {
                 stage("Python Package"){
                     steps {
                         dir("source"){
-                            powershell "& ${WORKSPACE}\\venv\\Scripts\\python.exe setup.py build -b ${WORKSPACE}\\build  | tee ${WORKSPACE}\\logs\\build.log"
+                            powershell "& ${WORKSPACE}\\venv\\Scripts\\python.exe setup.py build -b ${WORKSPACE}\\build   | tee ${WORKSPACE}\\logs\\build.log"
                         }
                     }
                     post{
@@ -128,6 +134,7 @@ pipeline {
                                 )
                             archiveArtifacts artifacts: "logs/build.log"
                         }
+
                     }
                 }
                 stage("Building Sphinx Documentation"){
@@ -142,8 +149,13 @@ pipeline {
                         }
                         success{
                             publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, keepAll: false, reportDir: 'build/docs/html', reportFiles: 'index.html', reportName: 'Documentation', reportTitles: ''])
-                            zip archive: true, dir: "build/docs/html", glob: '', zipFile: "dist/${env.DOC_ZIP_FILENAME}"
-                            stash includes: "dist/${env.DOC_ZIP_FILENAME},build/docs/html/**", name: 'DOCS_ARCHIVE'
+                            unstash "DIST-INFO"
+                            script{
+                                def props = readProperties interpolate: true, file: 'HathiZip.dist-info/METADATA'
+                                def DOC_ZIP_FILENAME = "${props.Name}-${props.Version}.doc.zip"
+                                zip archive: true, dir: "build/docs/html", glob: '', zipFile: "dist/${DOC_ZIP_FILENAME}"
+                                stash includes: "dist/${DOC_ZIP_FILENAME},build/docs/html/**", name: 'DOCS_ARCHIVE'
+                            }
                         }
                         failure{
                             echo "Failed to build Python package"
@@ -152,7 +164,7 @@ pipeline {
                             cleanWs(
                                 deleteDirs: true,
                                 patterns: [
-                                    [pattern: "dist/${env.DOC_ZIP_FILENAME}", type: 'INCLUDE'],
+                                    [pattern: "dist/*.doc.zip", type: 'INCLUDE'],
                                     [pattern: 'build/docs/html/**"', type: 'INCLUDE']
                                     ]
                             )
@@ -356,6 +368,7 @@ pipeline {
             }
             environment{
                 PATH = "${WORKSPACE}\\venv\\Scripts;${tool 'CPython-3.6'};${tool 'CPython-3.6'}\\Scripts;${PATH}"
+                DEVPI = credentials("DS_devpi")
             }
 
             stages{
@@ -407,15 +420,19 @@ pipeline {
                                         PATH = "${WORKSPACE}\\venv\\Scripts;$PATH"
                                     }
                                     steps {
-                                        devpiTest(
-                                            devpiExecutable: "${powershell(script: '(Get-Command devpi).path', returnStdout: true).trim()}",
-                                            url: "https://devpi.library.illinois.edu",
-                                            index: "${env.BRANCH_NAME}_staging",
-                                            pkgName: "${env.PKG_NAME}",
-                                            pkgVersion: "${env.PKG_VERSION}",
-                                            pkgRegex: "zip",
-                                            detox: false
-                                        )
+                                        unstash "DIST-INFO"
+                                        script{
+                                            def props = readProperties interpolate: true, file: 'HathiZip.dist-info/METADATA'
+                                            devpiTest(
+                                                devpiExecutable: "${powershell(script: '(Get-Command devpi).path', returnStdout: true).trim()}",
+                                                url: "https://devpi.library.illinois.edu",
+                                                index: "${env.BRANCH_NAME}_staging",
+                                                pkgName: "${props.Name}",
+                                                pkgVersion: "${props.Version}",
+                                                pkgRegex: "zip",
+                                                detox: false
+                                            )
+                                        }
                                         echo "Finished testing Source Distribution: .zip"
                                     }
 
@@ -469,15 +486,19 @@ pipeline {
                                     }
                                     steps {
                                         echo "Testing Whl package in devpi"
-                                        devpiTest(
-                                                devpiExecutable: "${powershell(script: '(Get-Command devpi).path', returnStdout: true).trim()}",
-                                                url: "https://devpi.library.illinois.edu",
-                                                index: "${env.BRANCH_NAME}_staging",
-                                                pkgName: "${env.PKG_NAME}",
-                                                pkgVersion: "${env.PKG_VERSION}",
-                                                pkgRegex: "whl",
-                                                detox: false
-                                            )
+                                        unstash "DIST-INFO"
+                                        script{
+                                            def props = readProperties interpolate: true, file: 'HathiZip.dist-info/METADATA'
+                                            devpiTest(
+                                                    devpiExecutable: "${powershell(script: '(Get-Command devpi).path', returnStdout: true).trim()}",
+                                                    url: "https://devpi.library.illinois.edu",
+                                                    index: "${env.BRANCH_NAME}_staging",
+                                                    pkgName: "${props.Name}",
+                                                    pkgVersion: "${props.Version}",
+                                                    pkgRegex: "whl",
+                                                    detox: false
+                                                )
+                                            }
 
                                         echo "Finished testing Built Distribution: .whl"
                                     }
@@ -507,27 +528,34 @@ pipeline {
                         }
                     }
                     steps {
+                        unstash "DIST-INFO"
                         script {
-                            input "Release ${env.PKG_NAME} ${env.PKG_VERSION} to DevPi Production?"
-                            withCredentials([usernamePassword(credentialsId: 'DS_devpi', usernameVariable: 'DEVPI_USERNAME', passwordVariable: 'DEVPI_PASSWORD')]) {
-                                bat "venv\\Scripts\\devpi.exe login ${DEVPI_USERNAME} --password ${DEVPI_PASSWORD}"
-                            }
-
+                            def props = readProperties interpolate: true, file: 'HathiZip.dist-info/METADATA'
+                            input "Release ${props.Name} ${props.Version} to DevPi Production?"
+                            bat "venv\\Scripts\\devpi.exe login ${env.DEVPI_USR} --password ${env.DEVPI_PSW}"
                             bat "venv\\Scripts\\devpi.exe use /DS_Jenkins/${env.BRANCH_NAME}_staging"
-                            bat "venv\\Scripts\\devpi.exe push ${env.PKG_NAME}==${env.PKG_VERSION} production/release"
+                            bat "venv\\Scripts\\devpi.exe push ${props.Name}==${props.Version} production/release"
                         }
                     }
                 }
             }
             post {
                 success {
-                    echo "it Worked. Pushing file to ${env.BRANCH_NAME} index"
-                    bat "venv\\Scripts\\devpi.exe login ${env.DEVPI_USR} --password ${env.DEVPI_PSW}"
-                    bat "venv\\Scripts\\devpi.exe use /${env.DEVPI_USR}/${env.BRANCH_NAME}_staging"
-                    bat "venv\\Scripts\\devpi.exe push ${env.PKG_NAME}==${env.PKG_VERSION} ${env.DEVPI_USR}/${env.BRANCH_NAME}"
+                    unstash "DIST-INFO"
+                    script {
+                        def props = readProperties interpolate: true, file: 'HathiZip.dist-info/METADATA'
+                        echo "it Worked. Pushing file to ${env.BRANCH_NAME} index"
+                        bat "venv\\Scripts\\devpi.exe login ${env.DEVPI_USR} --password ${env.DEVPI_PSW}"
+                        bat "venv\\Scripts\\devpi.exe use /${env.DEVPI_USR}/${env.BRANCH_NAME}_staging"
+                        bat "venv\\Scripts\\devpi.exe push ${props.Name}==${props.Version} ${env.DEVPI_USR}/${env.BRANCH_NAME}"
+                    }
                 }
                 cleanup{
-                    remove_from_devpi("venv\\Scripts\\devpi.exe", "${env.PKG_NAME}", "${env.PKG_VERSION}", "/${env.DEVPI_USR}/${env.BRANCH_NAME}_staging", "${env.DEVPI_USR}", "${env.DEVPI_PSW}")
+                    unstash "DIST-INFO"
+                    script {
+                        def props = readProperties interpolate: true, file: 'HathiZip.dist-info/METADATA'
+                        remove_from_devpi("venv\\Scripts\\devpi.exe", "${props.Name}", "${props.Version}", "/${env.DEVPI_USR}/${env.BRANCH_NAME}_staging", "${env.DEVPI_USR}", "${env.DEVPI_PSW}")
+                    }
                 }
                 failure {
                     echo "At least one package format on DevPi failed."
