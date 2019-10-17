@@ -214,30 +214,35 @@ pipeline {
 
                 }
                 stage("MyPy"){
-                    environment {
-                        PATH = "${WORKSPACE}\\venv\\Scripts;$PATH"
+                    agent {
+                      dockerfile {
+                        filename 'ci/docker/python-testing/Dockerfile'
+                        label "linux && docker"
+                        dir 'source'
+                      }
                     }
+//                    environment {
+//                        PATH = "${WORKSPACE}\\venv\\Scripts;$PATH"
+//                    }
                     steps{
-                        bat "if not exist reports\\mypy\\mypy_html mkdir reports\\mypy\\mypy_html"
+                        sh "mkdir -p reports/mypy"
+
                         dir("source") {
-                            bat returnStatus: true, script: "mypy.exe -p hathizip --junit-xml=${WORKSPACE}/reports/mypy/junit-${env.NODE_NAME}-mypy.xml --html-report ${WORKSPACE}/reports/mypy/mypy_html > ${WORKSPACE}\\logs\\mypy.log"
-//                            bat "mypy.exe -p hathizip --junit-xml=${WORKSPACE}/junit-${env.NODE_NAME}-mypy.xml --html-report ${WORKSPACE}/reports/mypy_html"
+                            sh "mkdir -p logs"
+                            sh(
+                                returnStatus: true,
+                                script: "mypy -p hathizip --html-report ${WORKSPACE}/reports/mypy/mypy_html | tee logs/mypy.log")
                         }
                     }
                     post{
                         always {
-                            junit "reports/mypy/junit-${env.NODE_NAME}-mypy.xml"
                             publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, keepAll: false, reportDir: 'reports/mypy/mypy_html', reportFiles: 'index.html', reportName: 'MyPy', reportTitles: ''])
-                            recordIssues(tools: [myPy(name: 'MyPy', pattern: 'logs/mypy.log')])
+                            dir("source"){
+                                recordIssues(tools: [myPy(name: 'MyPy', pattern: 'logs/mypy.log')])
+                            }
                         }
                         cleanup{
-                            cleanWs(
-                                deleteDirs: true,
-                                patterns: [
-                                        [pattern: 'reports/mypy', type: 'INCLUDE']
-                                    ]
-                                )
-
+                            deleteDir()
                         }
                     }
                 }
