@@ -174,11 +174,12 @@ pipeline {
             }
         }
         stage("Tests") {
-            environment {
-                PATH = "${WORKSPACE}\\venv\\Scripts;$PATH"
-            }
+
             parallel {
                 stage("PyTest"){
+                    environment {
+                        PATH = "${WORKSPACE}\\venv\\Scripts;$PATH"
+                    }
                     steps{
                         dir("source"){
                             bat "python -m pytest --junitxml=${WORKSPACE}/reports/junit-${env.NODE_NAME}-pytest.xml --junit-prefix=${env.NODE_NAME}-pytest --cov-report html:${WORKSPACE}/reports/coverage/ --cov=hathizip" //  --basetemp={envtmpdir}"
@@ -202,6 +203,9 @@ pipeline {
                     }
                 }
                 stage("Documentation"){
+                    environment {
+                        PATH = "${WORKSPACE}\\venv\\Scripts;$PATH"
+                    }
                     steps{
                         dir("source"){
                             bat "sphinx-build.exe -b doctest docs\\source ${WORKSPACE}\\build\\docs -d ${WORKSPACE}\\build\\docs\\doctrees -v"
@@ -210,6 +214,9 @@ pipeline {
 
                 }
                 stage("MyPy"){
+                    environment {
+                        PATH = "${WORKSPACE}\\venv\\Scripts;$PATH"
+                    }
                     steps{
                         bat "if not exist reports\\mypy\\mypy_html mkdir reports\\mypy\\mypy_html"
                         dir("source") {
@@ -235,6 +242,9 @@ pipeline {
                     }
                 }
                 stage("Run Flake8 Static Analysis") {
+                    environment {
+                        PATH = "${WORKSPACE}\\venv\\Scripts;$PATH"
+                    }
                     steps{
                         script{
                             bat "pip install flake8"
@@ -259,7 +269,7 @@ pipeline {
                 }
                 stage("Run Tox"){
                     environment{
-                        PATH = "${tool 'CPython-3.6'};${tool 'CPython-3.7'};$PATH"
+                        PATH = "${tool 'CPython-3.6'};${tool 'CPython-3.7'};${WORKSPACE}\\venv\\Scripts;$PATH"
                     }
                     when{
                         equals expected: true, actual: params.TEST_RUN_TOX
