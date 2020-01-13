@@ -3,6 +3,37 @@
 import org.ds.*
 
 @Library(["devpi", "PythonHelpers"]) _
+CONFIGURATIONS = [
+    '3.6': [
+        test_docker_image: "python:3.6-windowsservercore"
+        ],
+    "3.7": [
+        test_docker_image: "python:3.7"
+        ]
+]
+
+def get_package_version(stashName, metadataFile){
+    ws {
+        unstash "${stashName}"
+        script{
+            def props = readProperties interpolate: true, file: "${metadataFile}"
+            cleanWs(patterns: [[pattern: "${metadataFile}", type: 'INCLUDE']])
+            //deleteDir()
+            return props.Version
+        }
+    }
+}
+def get_package_name(stashName, metadataFile){
+    ws {
+        unstash "${stashName}"
+        script{
+            def props = readProperties interpolate: true, file: "${metadataFile}"
+            cleanWs(patterns: [[pattern: "${metadataFile}", type: 'INCLUDE']])
+            return props.Name
+        }
+    }
+}
+
 
 def remove_from_devpi(devpiExecutable, pkgName, pkgVersion, devpiIndex, devpiUsername, devpiPassword){
     script {
@@ -458,7 +489,7 @@ pipeline {
                 stage("Uploading to DevPi Staging"){
                     agent {
                         dockerfile {
-                            filename 'ci/docker/deploy/devpi/Dockerfile'
+                            filename 'ci/docker/deploy/devpi/deploy/Dockerfile'
                             label 'linux&&docker'
                             additionalBuildArgs '--build-arg USER_ID=$(id -u) --build-arg GROUP_ID=$(id -g)'
                           }
@@ -479,140 +510,43 @@ pipeline {
                     }
                 }
                 stage("Test DevPi packages") {
+                    environment{
+                        PKG_NAME = get_package_name("DIST-INFO", "HathiZip.dist-info/METADATA")
+                        PKG_VERSION = get_package_version("DIST-INFO", "HathiZip.dist-info/METADATA")
+                    }
+                    matrix {
 
-
-                    parallel {
-                        stage("Testing Submitted Source Distribution") {
-                            environment {
-                                PATH = "${tool 'CPython-3.7'};${tool 'CPython-3.6'};$PATH"
+                        axes {
+                            axis {
+                                name 'FORMAT'
+                                values 'zip', "whl"
                             }
-                            agent {
-                                node {
-                                    label "Windows && Python3"
-                                }
+                            axis {
+                                name 'PYTHON_VERSION'
+                                values '3.6', "3.7"
                             }
-                            options {
-                                skipDefaultCheckout(true)
-
-                            }
-                            stages{
-                                stage("Creating venv to test sdist"){
-                                    steps {
-                                        lock("system_python_${NODE_NAME}"){
-                                            bat "python -m venv venv"
-                                        }
-                                        bat "venv\\Scripts\\python.exe -m pip install pip --upgrade && venv\\Scripts\\pip.exe install setuptools --upgrade && venv\\Scripts\\pip.exe install \"tox<3.7\" detox devpi-client"
-                                    }
-
-                                }
-                                stage("Testing DevPi zip Package"){
-                                    options{
-                                        timeout(10)
-                                    }
-                                    environment {
-                                        PATH = "${WORKSPACE}\\venv\\Scripts;$PATH"
-                                    }
-                                    steps {
-                                        unstash "DIST-INFO"
-                                        script{
-                                            def props = readProperties interpolate: true, file: 'HathiZip.dist-info/METADATA'
-                                            devpiTest(
-                                                devpiExecutable: "${powershell(script: '(Get-Command devpi).path', returnStdout: true).trim()}",
-                                                url: "https://devpi.library.illinois.edu",
-                                                index: "${env.BRANCH_NAME}_staging",
-                                                pkgName: "${props.Name}",
-                                                pkgVersion: "${props.Version}",
-                                                pkgRegex: "zip",
-                                                detox: false
-                                            )
-                                        }
-                                        echo "Finished testing Source Distribution: .zip"
-                                    }
-
-                                }
-                            }
-                            post {
-                                cleanup{
-                                    cleanWs(
-                                        deleteDirs: true,
-                                        disableDeferredWipeout: true,
-                                        patterns: [
-                                            [pattern: '*tmp', type: 'INCLUDE'],
-                                            [pattern: 'certs', type: 'INCLUDE'],
-                                            [pattern: "HathiZip.dist-info/", type: 'INCLUDE'],
-                                            ]
-                                    )
-                                }
-                            }
-
                         }
-                        stage("Built Distribution: .whl") {
-                            agent {
-                                node {
-                                    label "Windows && Python3"
+                        agent {
+                          dockerfile {
+                            additionalBuildArgs "--build-arg PYTHON_DOCKER_IMAGE_BASE=${CONFIGURATIONS[PYTHON_VERSION].test_docker_image}"
+                            filename 'ci/docker/deploy/devpi/test/windows/Dockerfile'
+                            label 'windows && docker'
+                          }
+                        }
+                        stages{
+                            stage("Testing DevPi Package"){
+                                options{
+                                    timeout(10)
+                                }
+                                steps{
+                                    bat "devpi use https://devpi.library.illinois.edu --clientdir certs\\ && devpi login %DEVPI_USR% --password %DEVPI_PSW% --clientdir certs\\ && devpi use ${env.BRANCH_NAME}_staging --clientdir certs\\"
+                                    bat "devpi test --index ${env.BRANCH_NAME}_staging ${PKG_NAME}==${PKG_VERSION} -s ${FORMAT} --clientdir certs\\ -e py -v"
                                 }
                             }
-                            environment {
-                                PATH = "${tool 'CPython-3.6'};${tool 'CPython-3.6'}\\Scripts;${tool 'CPython-3.7'};$PATH"
-                            }
-                            options {
-                                skipDefaultCheckout(true)
-                            }
-                            stages{
-                                stage("Creating venv to Test Whl"){
-                                    steps {
-                                        lock("system_python_${NODE_NAME}"){
-                                            bat "if not exist venv\\36 mkdir venv\\36"
-                                            bat "\"${tool 'CPython-3.6'}\\python.exe\" -m venv venv\\36"
-                                            bat "if not exist venv\\37 mkdir venv\\37"
-                                            bat "\"${tool 'CPython-3.7'}\\python.exe\" -m venv venv\\37"
-                                        }
-                                        bat "venv\\36\\Scripts\\python.exe -m pip install pip --upgrade && venv\\36\\Scripts\\pip.exe install setuptools --upgrade && venv\\36\\Scripts\\pip.exe install \"tox<3.7\" devpi-client"
-                                    }
 
-                                }
-                                stage("Testing DevPi .whl Package"){
-                                    options{
-                                        timeout(10)
-                                    }
-                                    environment {
-                                        PATH = "${WORKSPACE}\\venv\\36\\Scripts;${WORKSPACE}\\venv\\37\\Scripts;$PATH"
-                                    }
-                                    steps {
-                                        echo "Testing Whl package in devpi"
-                                        unstash "DIST-INFO"
-                                        script{
-                                            def props = readProperties interpolate: true, file: 'HathiZip.dist-info/METADATA'
-                                            devpiTest(
-                                                    devpiExecutable: "${powershell(script: '(Get-Command devpi).path', returnStdout: true).trim()}",
-                                                    url: "https://devpi.library.illinois.edu",
-                                                    index: "${env.BRANCH_NAME}_staging",
-                                                    pkgName: "${props.Name}",
-                                                    pkgVersion: "${props.Version}",
-                                                    pkgRegex: "whl",
-                                                    detox: false
-                                                )
-                                            }
-
-                                        echo "Finished testing Built Distribution: .whl"
-                                    }
-                                }
-
-                            }
-                            post {
-                                cleanup{
-                                    cleanWs(
-                                        deleteDirs: true,
-                                        disableDeferredWipeout: true,
-                                        patterns: [
-                                            [pattern: '*tmp', type: 'INCLUDE'],
-                                            [pattern: 'certs', type: 'INCLUDE']
-                                            ]
-                                    )
-                                }
-                            }
                         }
                     }
+
                 }
                 stage("Deploy to DevPi Production") {
                     when {
@@ -620,6 +554,7 @@ pipeline {
                             equals expected: true, actual: params.DEPLOY_DEVPI_PRODUCTION
                             branch "master"
                         }
+                        beforeAgent true
                     }
                     agent {
                         dockerfile {
