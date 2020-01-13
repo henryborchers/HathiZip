@@ -434,28 +434,46 @@ pipeline {
             options{
                 timestamps()
             }
-            agent none
+            //agent none
+            agent{
+                label "windows && Python3"
+            }
             environment{
                 DEVPI = credentials("DS_devpi")
             }
 
             stages{
-                stage("Install DevPi Client"){
+                //stage("Install DevPi Client"){
+                //    agent {
+                //        dockerfile {
+                //            filename 'ci/docker/python37/windows/build/msvc/Dockerfile'
+                //            label "windows && docker"
+                //        }
+                //    }
+                //    steps{
+                //        bat "pip install devpi-client"
+                //    }
+                //}
+                stage("Uploading to DevPi Staging"){
                     agent {
                         dockerfile {
-                            filename 'ci/docker/python37/windows/build/msvc/Dockerfile'
-                            label "windows && docker"
-                        }
+                            filename 'ci/docker/deploy/devpi/Dockerfile'
+                            label 'linux&&docker'
+                            additionalBuildArgs '--build-arg USER_ID=$(id -u) --build-arg GROUP_ID=$(id -g)'
+                          }
                     }
-                    steps{
-                        bat "pip install devpi-client"
-                    }
-                }
-                stage("Uploading to DevPi Staging"){
                     steps {
                         unstash "DOCS_ARCHIVE"
                         unstash "dist"
-                        bat "devpi use https://devpi.library.illinois.edu && devpi login ${env.DEVPI_USR} --password ${env.DEVPI_PSW} && devpi use /${env.DEVPI_USR}/${env.BRANCH_NAME}_staging && devpi upload --from-dir dist"
+                        sh(
+                                label: "Connecting to DevPi Server",
+                                script: 'devpi use https://devpi.library.illinois.edu --clientdir ${WORKSPACE}/devpi && devpi login $DEVPI_USR --password $DEVPI_PSW --clientdir ${WORKSPACE}/devpi'
+                            )
+                            sh(
+                                label: "Uploading to DevPi Staging",
+                                script: """devpi use /${env.DEVPI_USR}/${env.BRANCH_NAME}_staging --clientdir ${WORKSPACE}/devpi
+    devpi upload --from-dir dist --clientdir ${WORKSPACE}/devpi"""
+                            )
 
                     }
                 }
@@ -621,6 +639,10 @@ pipeline {
                 }
             }
             post {
+                always{
+                    bat "\"${tool 'CPython-3.7'}\\python.exe\" -m venv venv && venv\\Scripts\\pip install devpi-client"
+
+                }
                 success {
                     unstash "DIST-INFO"
                     script {
