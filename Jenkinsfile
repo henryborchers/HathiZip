@@ -468,10 +468,10 @@ pipeline {
             options{
                 timestamps()
             }
-            //agent none
-            agent{
-                label "windows && Python3"
-            }
+            agent none
+            //agent{
+            //    label "windows && Python3"
+            //}
             environment{
                 DEVPI = credentials("DS_devpi")
             }
@@ -517,7 +517,6 @@ pipeline {
                         PKG_VERSION = get_package_version("DIST-INFO", "HathiZip.dist-info/METADATA")
                     }
                     matrix {
-
                         axes {
                             axis {
                                 name 'FORMAT'
@@ -548,6 +547,41 @@ pipeline {
 
                         }
                     }
+                    post{
+                        success{
+                            node('linux && docker') {
+                               script{
+                                    docker.build("hathizip:devpi.${env.BUILD_ID}",'-f ./ci/docker/deploy/devpi/deploy/Dockerfile --build-arg USER_ID=$(id -u) --build-arg GROUP_ID=$(id -g) .').inside{
+                                        unstash "DIST-INFO"
+                                        def props = readProperties interpolate: true, file: 'HathiZip.dist-info/METADATA'
+                                        sh(
+                                            label: "Connecting to DevPi Server",
+                                            script: 'devpi use https://devpi.library.illinois.edu --clientdir ${WORKSPACE}/devpi && devpi login $DEVPI_USR --password $DEVPI_PSW --clientdir ${WORKSPACE}/devpi'
+                                        )
+                                        sh "devpi use DS_Jenkins/${env.BRANCH_NAME}_staging --clientdir ${WORKSPACE}/devpi"
+                                        sh "devpi push ${props.Name}==${props.Version} DS_Jenkins/${env.BRANCH_NAME} --clientdir ${WORKSPACE}/devpi"
+                                    }
+                               }
+                            }
+                        }
+                        cleanup{
+                            node('linux && docker') {
+                               script{
+                                    docker.build("hathizip:devpi.${env.BUILD_ID}",'-f ./ci/docker/deploy/devpi/deploy/Dockerfile --build-arg USER_ID=$(id -u) --build-arg GROUP_ID=$(id -g) .').inside{
+                                        unstash "DIST-INFO"
+                                        def props = readProperties interpolate: true, file: 'HathiZip.dist-info/METADATA'
+                                        sh(
+                                            label: "Connecting to DevPi Server",
+                                            script: 'devpi use https://devpi.library.illinois.edu --clientdir ${WORKSPACE}/devpi && devpi login $DEVPI_USR --password $DEVPI_PSW --clientdir ${WORKSPACE}/devpi'
+                                        )
+                                        sh "devpi use /DS_Jenkins/${env.BRANCH_NAME}_staging --clientdir ${WORKSPACE}/devpi"
+                                        sh "devpi remove -y ${props.Name}==${props.Version} --clientdir ${WORKSPACE}/devpi"
+                                    }
+                               }
+                            }
+                        }
+
+                    }
                 }
                 stage("Deploy to DevPi Production") {
                     when {
@@ -575,32 +609,31 @@ pipeline {
                     }
                 }
             }
-            post {
-                always{
-                    bat "\"${tool 'CPython-3.7'}\\python.exe\" -m venv venv && venv\\Scripts\\pip install devpi-client"
-
-                }
-                success {
-                    unstash "DIST-INFO"
-                    script {
-                        def props = readProperties interpolate: true, file: 'HathiZip.dist-info/METADATA'
-                        echo "it Worked. Pushing file to ${env.BRANCH_NAME} index"
-                        bat "venv\\Scripts\\devpi.exe login ${env.DEVPI_USR} --password ${env.DEVPI_PSW}"
-                        bat "venv\\Scripts\\devpi.exe use /${env.DEVPI_USR}/${env.BRANCH_NAME}_staging"
-                        bat "venv\\Scripts\\devpi.exe push ${props.Name}==${props.Version} ${env.DEVPI_USR}/${env.BRANCH_NAME}"
-                    }
-                }
-                cleanup{
-                    unstash "DIST-INFO"
-                    script {
-                        def props = readProperties interpolate: true, file: 'HathiZip.dist-info/METADATA'
-                        remove_from_devpi("venv\\Scripts\\devpi.exe", "${props.Name}", "${props.Version}", "/${env.DEVPI_USR}/${env.BRANCH_NAME}_staging", "${env.DEVPI_USR}", "${env.DEVPI_PSW}")
-                    }
-                }
-                failure {
-                    echo "At least one package format on DevPi failed."
-                }
-            }
+            //post {
+            //    always{
+            //        bat "\"${tool 'CPython-3.7'}\\python.exe\" -m venv venv && venv\\Scripts\\pip install devpi-client"
+            //    }
+            //    success {
+            //        unstash "DIST-INFO"
+            //        script {
+            //            def props = readProperties interpolate: true, file: 'HathiZip.dist-info/METADATA'
+            //            echo "it Worked. Pushing file to ${env.BRANCH_NAME} index"
+            //            bat "venv\\Scripts\\devpi.exe login ${env.DEVPI_USR} --password ${env.DEVPI_PSW}"
+            //            bat "venv\\Scripts\\devpi.exe use /${env.DEVPI_USR}/${env.BRANCH_NAME}_staging"
+            //            bat "venv\\Scripts\\devpi.exe push ${props.Name}==${props.Version} ${env.DEVPI_USR}/${env.BRANCH_NAME}"
+            //        }
+            //    }
+            //    cleanup{
+            //        unstash "DIST-INFO"
+            //        script {
+            //            def props = readProperties interpolate: true, file: 'HathiZip.dist-info/METADATA'
+            //            remove_from_devpi("venv\\Scripts\\devpi.exe", "${props.Name}", "${props.Version}", "/${env.DEVPI_USR}/${env.BRANCH_NAME}_staging", "${env.DEVPI_USR}", "${env.DEVPI_PSW}")
+            //        }
+            //    }
+            //    failure {
+            //        echo "At least one package format on DevPi failed."
+            //    }
+            //}
         }
 
         stage("Deploy to SCCM") {
