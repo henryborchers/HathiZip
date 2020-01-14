@@ -5,10 +5,12 @@ import org.ds.*
 @Library(["devpi", "PythonHelpers"]) _
 CONFIGURATIONS = [
     '3.6': [
-        test_docker_image: "python:3.6-windowsservercore"
+        test_docker_image: "python:3.6-windowsservercore",
+        tox_env: "py36"
         ],
     "3.7": [
-        test_docker_image: "python:3.7"
+        test_docker_image: "python:3.7",
+        tox_env: "py37"
         ]
 ]
 
@@ -540,13 +542,12 @@ pipeline {
                                 }
                                 steps{
                                     bat "devpi use https://devpi.library.illinois.edu --clientdir certs\\ && devpi login %DEVPI_USR% --password %DEVPI_PSW% --clientdir certs\\ && devpi use ${env.BRANCH_NAME}_staging --clientdir certs\\"
-                                    bat "devpi test --index ${env.BRANCH_NAME}_staging ${PKG_NAME}==${PKG_VERSION} -s ${FORMAT} --clientdir certs\\ -e py -v"
+                                    bat "devpi test --index ${env.BRANCH_NAME}_staging ${PKG_NAME}==${PKG_VERSION} -s ${FORMAT} --clientdir certs\\ -e ${CONFIGURATIONS[PYTHON_VERSION].tox_env} -v"
                                 }
                             }
 
                         }
                     }
-
                 }
                 stage("Deploy to DevPi Production") {
                     when {
