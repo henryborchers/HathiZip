@@ -19,7 +19,6 @@ pipeline {
     agent none
     options {
         disableConcurrentBuilds()  //each branch has 1 job running at a time
-        timeout(60)  // Timeout after 60 minutes. This shouldn't take this long but it hangs for some reason
     }
     triggers {
        parameterizedCron '@daily % PACKAGE_CX_FREEZE=true; DEPLOY_DEVPI=true; TEST_RUN_TOX=true'
@@ -291,6 +290,9 @@ pipeline {
                             label "windows && docker"
                         }
                     }
+                    options{
+                        timeout(5)
+                    }
                     steps{
                         bat "python setup.py sdist --format zip -d dist bdist_wheel -d dist"
 
@@ -323,6 +325,9 @@ pipeline {
                     when{
                         equals expected: true, actual: params.PACKAGE_CX_FREEZE
                         beforeAgent true
+                    }
+                    options{
+                        timeout(15)
                     }
                     steps{
                         //bat "venv\\Scripts\\pip.exe install -r source\\requirements.txt -r source\\requirements-freeze.txt -r source\\requirements-dev.txt -q"
@@ -380,6 +385,9 @@ pipeline {
                             label 'linux&&docker'
                             additionalBuildArgs '--build-arg USER_ID=$(id -u) --build-arg GROUP_ID=$(id -g)'
                           }
+                    }
+                    options{
+                        timeout(5)
                     }
                     steps {
                         unstash "DOCS_ARCHIVE"
@@ -499,6 +507,10 @@ pipeline {
                             branch "master"
                         }
                         beforeAgent true
+                        beforeInput true
+                    }
+                    input{
+                        message 'Release to DevPi Production?'
                     }
                     agent {
                         dockerfile {
@@ -510,7 +522,6 @@ pipeline {
                         unstash "DIST-INFO"
                         script {
                             def props = readProperties interpolate: true, file: 'HathiZip.dist-info/METADATA'
-                            input "Release ${props.Name} ${props.Version} to DevPi Production?"
                             bat "devpi login ${env.DEVPI_USR} --password ${env.DEVPI_PSW}"
                             bat "devpi  use /DS_Jenkins/${env.BRANCH_NAME}"
                             bat "devpi push ${props.Name}==${props.Version} production/release"
