@@ -510,6 +510,18 @@ pipeline {
                             )
 
                     }
+                    post{
+                        cleanup{
+                            cleanWs(
+                                deleteDirs: true,
+                                patterns: [
+                                    [pattern: "dist/", type: 'INCLUDE'],
+                                    [pattern: "HathiZip.dist-info/", type: 'INCLUDE'],
+                                    [pattern: 'build/', type: 'INCLUDE']
+                                ]
+                            )
+                        }
+                    }
                 }
                 stage("Test DevPi packages") {
                     environment{
@@ -603,37 +615,12 @@ pipeline {
                             def props = readProperties interpolate: true, file: 'HathiZip.dist-info/METADATA'
                             input "Release ${props.Name} ${props.Version} to DevPi Production?"
                             bat "devpi login ${env.DEVPI_USR} --password ${env.DEVPI_PSW}"
-                            bat "devpi  use /DS_Jenkins/${env.BRANCH_NAME}_staging"
+                            bat "devpi  use /DS_Jenkins/${env.BRANCH_NAME}"
                             bat "devpi push ${props.Name}==${props.Version} production/release"
                         }
                     }
                 }
             }
-            //post {
-            //    always{
-            //        bat "\"${tool 'CPython-3.7'}\\python.exe\" -m venv venv && venv\\Scripts\\pip install devpi-client"
-            //    }
-            //    success {
-            //        unstash "DIST-INFO"
-            //        script {
-            //            def props = readProperties interpolate: true, file: 'HathiZip.dist-info/METADATA'
-            //            echo "it Worked. Pushing file to ${env.BRANCH_NAME} index"
-            //            bat "venv\\Scripts\\devpi.exe login ${env.DEVPI_USR} --password ${env.DEVPI_PSW}"
-            //            bat "venv\\Scripts\\devpi.exe use /${env.DEVPI_USR}/${env.BRANCH_NAME}_staging"
-            //            bat "venv\\Scripts\\devpi.exe push ${props.Name}==${props.Version} ${env.DEVPI_USR}/${env.BRANCH_NAME}"
-            //        }
-            //    }
-            //    cleanup{
-            //        unstash "DIST-INFO"
-            //        script {
-            //            def props = readProperties interpolate: true, file: 'HathiZip.dist-info/METADATA'
-            //            remove_from_devpi("venv\\Scripts\\devpi.exe", "${props.Name}", "${props.Version}", "/${env.DEVPI_USR}/${env.BRANCH_NAME}_staging", "${env.DEVPI_USR}", "${env.DEVPI_PSW}")
-            //        }
-            //    }
-            //    failure {
-            //        echo "At least one package format on DevPi failed."
-            //    }
-            //}
         }
 
         stage("Deploy to SCCM") {
