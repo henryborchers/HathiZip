@@ -32,7 +32,7 @@ pipeline {
         booleanParam(name: "DEPLOY_DEVPI_PRODUCTION", defaultValue: false, description: "Deploy to https://devpi.library.illinois.edu/production/release")
         booleanParam(name: "DEPLOY_SCCM", defaultValue: false, description: "Deploy to SCCM")
         booleanParam(name: "UPDATE_DOCS", defaultValue: false, description: "Update online documentation")
-        string(name: 'URL_SUBFOLDER', defaultValue: "hathi_zip", description: 'The directory that the docs should be saved under')
+
     }
     stages {
         stage("Stashing important files for later"){
@@ -569,11 +569,18 @@ pipeline {
                 label "Linux"
             }
             when {
-                expression { params.UPDATE_DOCS == true }
+                equals expected: true, actual: params.UPDATE_DOCS
+                beforeAgent true
+                beforeInput true
             }
-
+            input {
+                message 'Update online documentation'
+                parameters {
+                    string defaultValue: 'hathi_zip', description: 'The directory that the docs should be saved under', name: 'URL_SUBFOLDER', trim: true
+                }
+            }
             steps {
-                updateOnlineDocs url_subdomain: params.URL_SUBFOLDER, stash_name: "HTML Documentation"
+                updateOnlineDocs url_subdomain: "${URL_SUBFOLDER}", stash_name: "HTML Documentation"
 
             }
         }
