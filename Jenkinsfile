@@ -538,10 +538,19 @@ pipeline {
                     branch "master"
                 }
                 beforeAgent true
+                beforeInput true
             }
             agent{
                 label "linux"
             }
+            input {
+                message 'Deploy to production?'
+                parameters {
+                    string defaultValue: '', description: '', name: 'SCCM_UPLOAD_FOLDER', trim: true
+                    string defaultValue: '', description: '', name: 'SCCM_STAGING_FOLDER', trim: true
+                }
+            }
+
             options{
                 skipDefaultCheckout true
             }
@@ -549,7 +558,6 @@ pipeline {
             steps {
                 unstash "msi"
                 deployStash("msi", "${env.SCCM_STAGING_FOLDER}/${params.PROJECT_NAME}/")
-                input("Deploy to production?")
                 deployStash("msi", "${env.SCCM_UPLOAD_FOLDER}")
 
             }
