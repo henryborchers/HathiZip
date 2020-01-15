@@ -15,7 +15,7 @@ CONFIGURATIONS = [
 ]
 
 def get_package_version(stashName, metadataFile){
-    ws {
+    node {
         unstash "${stashName}"
         script{
             def props = readProperties interpolate: true, file: "${metadataFile}"
@@ -26,7 +26,7 @@ def get_package_version(stashName, metadataFile){
     }
 }
 def get_package_name(stashName, metadataFile){
-    ws {
+    node {
         unstash "${stashName}"
         script{
             def props = readProperties interpolate: true, file: "${metadataFile}"
