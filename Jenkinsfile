@@ -15,34 +15,12 @@ CONFIGURATIONS = [
 ]
 
 
-def remove_from_devpi(devpiExecutable, pkgName, pkgVersion, devpiIndex, devpiUsername, devpiPassword){
-    script {
-                try {
-                    bat "${devpiExecutable} login ${devpiUsername} --password ${devpiPassword}"
-                    bat "${devpiExecutable} use ${devpiIndex}"
-                    bat "${devpiExecutable} remove -y ${pkgName}==${pkgVersion}"
-                } catch (Exception ex) {
-                    echo "Failed to remove ${pkgName}==${pkgVersion} from ${devpiIndex}"
-            }
-
-    }
-}
-
 pipeline {
     agent none
-    //agent {
-    //    label "Windows && Python3"
-    //}
     options {
         disableConcurrentBuilds()  //each branch has 1 job running at a time
         timeout(60)  // Timeout after 60 minutes. This shouldn't take this long but it hangs for some reason
-        //checkoutToSubdirectory("source")
     }
-//    environment {
-////        DEVPI = credentials("DS_devpi")
-////        mypy_args = "--junit-xml=mypy.xml"
-////        pytest_args = "--junitxml=reports/junit-{env:OS:UNKNOWN_OS}-{envname}.xml --junit-prefix={env:OS:UNKNOWN_OS}  --basetemp={envtmpdir}"
-//    }
     triggers {
        parameterizedCron '@daily % PACKAGE_CX_FREEZE=true; DEPLOY_DEVPI=true; TEST_RUN_TOX=true'
     }
@@ -102,10 +80,6 @@ pipeline {
                     }
                     post{
                         always{
-                            recordIssues(tools: [
-                                        pyLint(name: 'Setuptools Build: PyLint', pattern: 'logs/build.log'),
-                                    ]
-                                )
                             archiveArtifacts artifacts: "logs/build.log"
                         }
                         cleanup{
@@ -186,10 +160,7 @@ pipeline {
                         }
                     }
                 }
-                stage("Documentation"){
-                    //environment {
-                    //    PATH = "${WORKSPACE}\\venv\\Scripts;$PATH"
-                    //}
+                stage("Doctest"){
                     agent {
                         dockerfile {
                             filename 'ci/docker/python37/windows/build/msvc/Dockerfile'
@@ -202,43 +173,14 @@ pipeline {
                     post{
                         cleanup{
                             cleanWs(
-                                    deleteDirs: true,
-                                    patterns: [
-                                        [pattern: 'build/', type: 'INCLUDE'],
-                                        [pattern: 'dist/', type: 'INCLUDE'],
-                                        [pattern: 'logs/', type: 'INCLUDE'],
-                                        [pattern: 'HathiZip.egg-info/', type: 'INCLUDE'],
-                                    ]
-                                )
-                            //cleanWs(
-                            //    deleteDirs: true,
-                            //    patterns: [
-                            //        [pattern: 'ci/', type: 'EXCLUDE'],
-                            //        [pattern: 'docs/', type: 'EXCLUDE'],
-                            //        [pattern: 'hathizip/', type: 'EXCLUDE'],
-                            //        [pattern: 'tests/', type: 'EXCLUDE'],
-                            //        [pattern: '.git/', type: 'EXCLUDE'],
-                            //        [pattern: '.gitignore', type: 'EXCLUDE'],
-                            //        [pattern: '.travis.yml', type: 'EXCLUDE'],
-                            //        [pattern: 'CHANGELOG.rst', type: 'EXCLUDE'],
-                            //        [pattern: 'cx_setup.py', type: 'EXCLUDE'],
-                            //        [pattern: 'deployment.yml', type: 'EXCLUDE'],
-                            //        [pattern: 'documentation.url', type: 'EXCLUDE'],
-                            //        [pattern: 'Jenkinsfile', type: 'EXCLUDE'],
-                            //        [pattern: 'LICENSE', type: 'EXCLUDE'],
-                            //        [pattern: 'make.bat', type: 'EXCLUDE'],
-                            //        [pattern: 'MANIFEST.in', type: 'EXCLUDE'],
-                            //        [pattern: 'Pipfile', type: 'EXCLUDE'],
-                            //        [pattern: 'Pipfile.lock', type: 'EXCLUDE'],
-                            //        [pattern: 'README.rst', type: 'EXCLUDE'],
-                            //        [pattern: 'requirements.txt', type: 'EXCLUDE'],
-                            //        [pattern: 'requirements-dev.txt', type: 'EXCLUDE'],
-                            //        [pattern: 'requirements-freeze.txt', type: 'EXCLUDE'],
-                            //        [pattern: 'setup.cfg', type: 'EXCLUDE'],
-                            //        [pattern: 'setup.py', type: 'EXCLUDE'],
-                            //        [pattern: 'tox.ini', type: 'EXCLUDE']
-                            //    ]
-                            //)
+                                deleteDirs: true,
+                                patterns: [
+                                    [pattern: 'build/', type: 'INCLUDE'],
+                                    [pattern: 'dist/', type: 'INCLUDE'],
+                                    [pattern: 'logs/', type: 'INCLUDE'],
+                                    [pattern: 'HathiZip.egg-info/', type: 'INCLUDE'],
+                                ]
+                            )
                         }
                     }
 
@@ -250,16 +192,13 @@ pipeline {
                         label "linux && docker"
                       }
                     }
-//                    environment {
-//                        PATH = "${WORKSPACE}\\venv\\Scripts;$PATH"
-//                    }
                     steps{
-                        sh "mkdir -p reports/mypy"
-
-                        sh "mkdir -p logs"
-                        sh(
-                            returnStatus: true,
-                            script: "mypy -p hathizip --html-report ${WORKSPACE}/reports/mypy/mypy_html | tee logs/mypy.log")
+                        sh "mkdir -p reports/mypy && mkdir -p logs"
+                        catchError(buildResult: 'SUCCESS', message: 'mypy found some warnings', stageResult: 'UNSTABLE') {
+                            sh(
+                                script: "mypy -p hathizip --html-report ${WORKSPACE}/reports/mypy/mypy_html | tee logs/mypy.log"
+                            )
+                        }
                     }
                     post{
                         always {
@@ -280,13 +219,8 @@ pipeline {
                     }
                     steps{
                         bat "if not exist logs mkdir logs"
-                        script{
-                            // TODO: change to catch errors block
-                            try{
-                                bat "flake8 pyhathiprep --tee --output-file=logs\\flake8.log"
-                            } catch (exc) {
-                                echo "flake8 found some warnings"
-                            }
+                        catchError(buildResult: 'SUCCESS', message: 'flake8 found some warnings', stageResult: 'UNSTABLE') {
+                            bat "flake8 pyhathiprep --tee --output-file=logs\\flake8.log"
                         }
                     }
                     post {
@@ -314,9 +248,6 @@ pipeline {
                             label "windows && docker"
                         }
                     }
-                    //environment{
-                    //    PATH = "${tool 'CPython-3.6'};${tool 'CPython-3.7'};${WORKSPACE}\\venv\\Scripts;$PATH"
-                    //}
                     when{
                         equals expected: true, actual: params.TEST_RUN_TOX
                         beforeAgent true
@@ -335,15 +266,6 @@ pipeline {
                                 )
                             }
                         }
-//                        dir("source"){
-//                            script{
-//                                try{
-//                                    bat "tox --parallel=auto --parallel-live --workdir ${WORKSPACE}\\.tox -vv"
-//                                } catch (exc) {
-//                                    bat "tox --parallel=auto --parallel-live --workdir ${WORKSPACE}\\.tox --recreate -vv"
-//                                }
-//                            }
-//                        }
                     }
                     post{
                         always{
@@ -446,25 +368,11 @@ pipeline {
                 timestamps()
             }
             agent none
-            //agent{
-            //    label "windows && Python3"
-            //}
             environment{
                 DEVPI = credentials("DS_devpi")
             }
 
             stages{
-                //stage("Install DevPi Client"){
-                //    agent {
-                //        dockerfile {
-                //            filename 'ci/docker/python37/windows/build/msvc/Dockerfile'
-                //            label "windows && docker"
-                //        }
-                //    }
-                //    steps{
-                //        bat "pip install devpi-client"
-                //    }
-                //}
                 stage("Uploading to DevPi Staging"){
                     agent {
                         dockerfile {
@@ -659,30 +567,4 @@ pipeline {
             }
         }
     }
-    //post{
-    //    cleanup{
-//            script {
-//                if(fileExists('source/setup.py')){
-//                    dir("source"){
-//                        try{
-//                            retry(3) {
-//                                bat "${WORKSPACE}\\venv\\Scripts\\python.exe setup.py clean --all"
-//                            }
-//                        } catch (Exception ex) {
-//                            echo "Unable to successfully run clean. Purging source directory."
-//                            deleteDir()
-//                        }
-//                    }
-//                }
-//            }
-//            cleanWs deleteDirs: true, patterns: [
-//                    [pattern: 'source', type: 'INCLUDE'],
-//                    [pattern: 'certs', type: 'INCLUDE'],
-//                    [pattern: 'dist*', type: 'INCLUDE'],
-//                    [pattern: 'logs*', type: 'INCLUDE'],
-//                    [pattern: 'reports*', type: 'INCLUDE'],
-//                    [pattern: '*tmp', type: 'INCLUDE']
-//                    ]
-//        }
-//    }
 }
