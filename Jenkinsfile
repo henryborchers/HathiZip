@@ -14,28 +14,6 @@ CONFIGURATIONS = [
         ]
 ]
 
-def get_package_version(stashName, metadataFile){
-    node {
-        unstash "${stashName}"
-        script{
-            def props = readProperties interpolate: true, file: "${metadataFile}"
-            cleanWs(patterns: [[pattern: "${metadataFile}", type: 'INCLUDE']])
-            //deleteDir()
-            return props.Version
-        }
-    }
-}
-def get_package_name(stashName, metadataFile){
-    node {
-        unstash "${stashName}"
-        script{
-            def props = readProperties interpolate: true, file: "${metadataFile}"
-            cleanWs(patterns: [[pattern: "${metadataFile}", type: 'INCLUDE']])
-            return props.Name
-        }
-    }
-}
-
 
 def remove_from_devpi(devpiExecutable, pkgName, pkgVersion, devpiIndex, devpiUsername, devpiPassword){
     script {
@@ -49,7 +27,6 @@ def remove_from_devpi(devpiExecutable, pkgName, pkgVersion, devpiIndex, devpiUse
 
     }
 }
-
 
 pipeline {
     agent none
@@ -524,10 +501,6 @@ pipeline {
                     }
                 }
                 stage("Test DevPi packages") {
-                    environment{
-                        PKG_NAME = get_package_name("DIST-INFO", "HathiZip.dist-info/METADATA")
-                        PKG_VERSION = get_package_version("DIST-INFO", "HathiZip.dist-info/METADATA")
-                    }
                     matrix {
                         axes {
                             axis {
@@ -552,8 +525,12 @@ pipeline {
                                     timeout(10)
                                 }
                                 steps{
-                                    bat "devpi use https://devpi.library.illinois.edu --clientdir certs\\ && devpi login %DEVPI_USR% --password %DEVPI_PSW% --clientdir certs\\ && devpi use ${env.BRANCH_NAME}_staging --clientdir certs\\"
-                                    bat "devpi test --index ${env.BRANCH_NAME}_staging ${PKG_NAME}==${PKG_VERSION} -s ${FORMAT} --clientdir certs\\ -e ${CONFIGURATIONS[PYTHON_VERSION].tox_env} -v"
+                                    script{
+                                        unstash "DIST-INFO"
+                                        def props = readProperties interpolate: true, file: 'HathiZip.dist-info/METADATA'
+                                        bat "devpi use https://devpi.library.illinois.edu --clientdir certs\\ && devpi login %DEVPI_USR% --password %DEVPI_PSW% --clientdir certs\\ && devpi use ${env.BRANCH_NAME}_staging --clientdir certs\\"
+                                        bat "devpi test --index ${env.BRANCH_NAME}_staging ${props.Name}==${props.Version} -s ${FORMAT} --clientdir certs\\ -e ${CONFIGURATIONS[PYTHON_VERSION].tox_env} -v"
+                                    }
                                 }
                             }
 
