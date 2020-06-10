@@ -218,7 +218,6 @@ pipeline {
                     }
                     post {
                         always {
-
                             recordIssues(tools: [flake8(name: 'Flake8', pattern: 'logs/flake8.log')])
                         }
                         cleanup{
