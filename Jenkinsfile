@@ -97,7 +97,7 @@ pipeline {
                 stage("Python Package"){
                     steps {
                         sh(script: """mkdir -p logs
-                                      python setup.py build -b build | tee logs/build.log"
+                                      python setup.py build -b build | tee logs/build.log
                                       """
                         )
                     }
@@ -122,7 +122,8 @@ pipeline {
                         sh(
                             label: "Building docs on ${env.NODE_NAME}",
                             script: """mkdir -p logs
-                                       python -m sphinx docs/source build/docs/html -d build/docs/.doctrees -v -w logs/build_sphinx.log"""
+                                       python -m sphinx docs/source build/docs/html -d build/docs/.doctrees -v -w logs/build_sphinx.log
+                                       """
                         )
 //                         bat(label:"Building docs on ${env.NODE_NAME}",
 //                         script: "python -m sphinx docs/source build/docs/html -d build/docs/.doctrees -v -w logs\\build_sphinx.log")
