@@ -35,35 +35,52 @@ pipeline {
 
     }
     stages {
-        stage("Stashing important files for later"){
-            agent {
+//         stage("Stashing important files for later"){
+//             agent {
+//                 dockerfile {
+//                     filename 'ci/docker/python37/windows/build/msvc/Dockerfile'
+//                     label "windows && docker"
+//                 }
+//             }
+//             steps{
+//                 bat "python setup.py dist_info"
+//             }
+//             post{
+//                 success{
+//                     stash includes: "HathiZip.dist-info/**", name: 'DIST-INFO'
+//                     archiveArtifacts artifacts: "HathiZip.dist-info/**"
+//                     stash includes: 'deployment.yml', name: "Deployment"
+//                 }
+//                 cleanup{
+//                     cleanWs(
+//                         deleteDirs: true,
+//                         patterns: [
+//                             [pattern: "dist/", type: 'INCLUDE'],
+//                             [pattern: "HathiZip.dist-info/", type: 'INCLUDE'],
+//                             [pattern: 'build/', type: 'INCLUDE']
+//                         ]
+//                     )
+//                 }
+//             }
+//         }
+        stage("Getting Distribution Info"){
+           agent {
                 dockerfile {
-                    filename 'ci/docker/python37/windows/build/msvc/Dockerfile'
-                    label "windows && docker"
+                    filename 'ci/docker/python/linux/testing/Dockerfile'
+                    label 'linux && docker'
                 }
             }
+
             steps{
-                bat "python setup.py dist_info"
+                sh "python setup.py dist_info"
             }
             post{
                 success{
                     stash includes: "HathiZip.dist-info/**", name: 'DIST-INFO'
                     archiveArtifacts artifacts: "HathiZip.dist-info/**"
-                    stash includes: 'deployment.yml', name: "Deployment"
-                }
-                cleanup{
-                    cleanWs(
-                        deleteDirs: true,
-                        patterns: [
-                            [pattern: "dist/", type: 'INCLUDE'],
-                            [pattern: "HathiZip.dist-info/", type: 'INCLUDE'],
-                            [pattern: 'build/', type: 'INCLUDE']
-                        ]
-                    )
                 }
             }
         }
-
         stage("Build"){
             agent {
               dockerfile {
