@@ -31,34 +31,6 @@ pipeline {
 
     }
     stages {
-//         stage("Stashing important files for later"){
-//             agent {
-//                 dockerfile {
-//                     filename 'ci/docker/python37/windows/build/msvc/Dockerfile'
-//                     label "windows && docker"
-//                 }
-//             }
-//             steps{
-//                 bat "python setup.py dist_info"
-//             }
-//             post{
-//                 success{
-//                     stash includes: "HathiZip.dist-info/**", name: 'DIST-INFO'
-//                     archiveArtifacts artifacts: "HathiZip.dist-info/**"
-//                     stash includes: 'deployment.yml', name: "Deployment"
-//                 }
-//                 cleanup{
-//                     cleanWs(
-//                         deleteDirs: true,
-//                         patterns: [
-//                             [pattern: "dist/", type: 'INCLUDE'],
-//                             [pattern: "HathiZip.dist-info/", type: 'INCLUDE'],
-//                             [pattern: 'build/', type: 'INCLUDE']
-//                         ]
-//                     )
-//                 }
-//             }
-//         }
         stage("Getting Distribution Info"){
            agent {
                 dockerfile {
@@ -77,12 +49,6 @@ pipeline {
             }
         }
         stage("Build"){
-//             agent {
-//               dockerfile {
-//                 filename 'ci/docker/python37/windows/build/msvc/Dockerfile'
-//                 label "windows && docker"
-//               }
-//             }
             agent {
                 dockerfile {
                     filename 'ci/docker/python/linux/testing/Dockerfile'
@@ -121,8 +87,6 @@ pipeline {
                                        python -m sphinx docs/source build/docs/html -d build/docs/.doctrees -v -w logs/build_sphinx.log
                                        """
                         )
-//                         bat(label:"Building docs on ${env.NODE_NAME}",
-//                         script: "python -m sphinx docs/source build/docs/html -d build/docs/.doctrees -v -w logs\\build_sphinx.log")
                     }
                     post{
                         always {
@@ -160,12 +124,6 @@ pipeline {
 
             parallel {
                 stage("PyTest"){
-//                     agent {
-//                         dockerfile {
-//                             filename 'ci/docker/python37/windows/build/msvc/Dockerfile'
-//                             label "windows && docker"
-//                         }
-//                     }
                     agent {
                         dockerfile {
                             filename 'ci/docker/python/linux/testing/Dockerfile'
@@ -176,8 +134,6 @@ pipeline {
                         sh(label: "Running pytest",
                             script: """python -m pytest --junitxml=reports/junit-${env.NODE_NAME}-pytest.xml --junit-prefix=${env.NODE_NAME}-pytest --cov-report html:reports/coverage/ --cov=hathizip"""
                         )
-//                         bat "python -m pytest --junitxml=reports/junit-${env.NODE_NAME}-pytest.xml --junit-prefix=${env.NODE_NAME}-pytest --cov-report html:reports/coverage/ --cov=hathizip" //  --basetemp={envtmpdir}"
-
                     }
                     post {
                         always{
@@ -195,12 +151,6 @@ pipeline {
                     }
                 }
                 stage("Doctest"){
-//                     agent {
-//                         dockerfile {
-//                             filename 'ci/docker/python37/windows/build/msvc/Dockerfile'
-//                             label "windows && docker"
-//                         }
-//                     }
                     agent {
                         dockerfile {
                             filename 'ci/docker/python/linux/testing/Dockerfile'
@@ -209,7 +159,6 @@ pipeline {
                     }
                     steps{
                         sh "python -m sphinx -b doctest docs/source build/docs -d build/docs/doctrees -v"
-//                         bat "python -m sphinx -b doctest docs\\source build\\docs -d build\\docs\\doctrees -v"
                     }
                     post{
                         cleanup{
@@ -252,12 +201,6 @@ pipeline {
                     }
                 }
                 stage("Run Flake8 Static Analysis") {
-//                     agent {
-//                         dockerfile {
-//                             filename 'ci/docker/python37/windows/build/msvc/Dockerfile'
-//                             label "windows && docker"
-//                         }
-//                     }
                     agent {
                         dockerfile {
                             filename 'ci/docker/python/linux/testing/Dockerfile'
@@ -265,14 +208,12 @@ pipeline {
                         }
                     }
                     steps{
-//                         bat "if not exist logs mkdir logs"
                         catchError(buildResult: 'SUCCESS', message: 'flake8 found some warnings', stageResult: 'UNSTABLE') {
                             sh(label: "Running flake8",
                                script: """mkdir -p logs
                                           flake8 pyhathiprep --tee --output-file=logs/flake8.log
                                           """
                             )
-//                             bat "flake8 pyhathiprep --tee --output-file=logs\\flake8.log"
                         }
                     }
                     post {
@@ -294,12 +235,6 @@ pipeline {
                     }
                 }
                 stage("Run Tox"){
-//                     agent {
-//                         dockerfile {
-//                             filename 'ci/docker/python37/windows/build/msvc/Dockerfile'
-//                             label "windows && docker"
-//                         }
-//                     }
                     agent {
                         dockerfile {
                             filename 'ci/docker/python/linux/testing/Dockerfile'
@@ -343,12 +278,6 @@ pipeline {
         stage("Packaging") {
             parallel {
                 stage("Source and Wheel formats"){
-//                     agent {
-//                         dockerfile {
-//                             filename 'ci/docker/python37/windows/build/msvc/Dockerfile'
-//                             label "windows && docker"
-//                         }
-//                     }
                     agent {
                         dockerfile {
                             filename 'ci/docker/python/linux/testing/Dockerfile'
