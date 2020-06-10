@@ -347,17 +347,23 @@ pipeline {
         stage("Packaging") {
             parallel {
                 stage("Source and Wheel formats"){
+//                     agent {
+//                         dockerfile {
+//                             filename 'ci/docker/python37/windows/build/msvc/Dockerfile'
+//                             label "windows && docker"
+//                         }
+//                     }
                     agent {
                         dockerfile {
-                            filename 'ci/docker/python37/windows/build/msvc/Dockerfile'
-                            label "windows && docker"
+                            filename 'ci/docker/python/linux/testing/Dockerfile'
+                            label 'linux && docker'
                         }
                     }
                     options{
                         timeout(5)
                     }
                     steps{
-                        bat "python setup.py sdist --format zip -d dist bdist_wheel -d dist"
+                        sh "python setup.py sdist --format zip -d dist bdist_wheel -d dist"
 
                     }
                     post{
