@@ -164,14 +164,23 @@ pipeline {
 
             parallel {
                 stage("PyTest"){
+//                     agent {
+//                         dockerfile {
+//                             filename 'ci/docker/python37/windows/build/msvc/Dockerfile'
+//                             label "windows && docker"
+//                         }
+//                     }
                     agent {
                         dockerfile {
-                            filename 'ci/docker/python37/windows/build/msvc/Dockerfile'
-                            label "windows && docker"
+                            filename 'ci/docker/python/linux/testing/Dockerfile'
+                            label 'linux && docker'
                         }
                     }
                     steps{
-                        bat "python -m pytest --junitxml=reports/junit-${env.NODE_NAME}-pytest.xml --junit-prefix=${env.NODE_NAME}-pytest --cov-report html:reports/coverage/ --cov=hathizip" //  --basetemp={envtmpdir}"
+                        sh(label: "Running pytest",
+                            script: """python -m pytest --junitxml=reports/junit-${env.NODE_NAME}-pytest.xml --junit-prefix=${env.NODE_NAME}-pytest --cov-report html:reports/coverage/ --cov=hathizip"""
+                        )
+//                         bat "python -m pytest --junitxml=reports/junit-${env.NODE_NAME}-pytest.xml --junit-prefix=${env.NODE_NAME}-pytest --cov-report html:reports/coverage/ --cov=hathizip" //  --basetemp={envtmpdir}"
 
                     }
                     post {
@@ -182,7 +191,6 @@ pipeline {
                                     report_files.each { report_file ->
                                         echo "Found ${report_file}"
                                         junit "${report_file}"
-                                        bat "del ${report_file}"
                                     }
                                 }
                             }
@@ -191,14 +199,21 @@ pipeline {
                     }
                 }
                 stage("Doctest"){
+//                     agent {
+//                         dockerfile {
+//                             filename 'ci/docker/python37/windows/build/msvc/Dockerfile'
+//                             label "windows && docker"
+//                         }
+//                     }
                     agent {
                         dockerfile {
-                            filename 'ci/docker/python37/windows/build/msvc/Dockerfile'
-                            label "windows && docker"
+                            filename 'ci/docker/python/linux/testing/Dockerfile'
+                            label 'linux && docker'
                         }
                     }
                     steps{
-                        bat "python -m sphinx -b doctest docs\\source build\\docs -d build\\docs\\doctrees -v"
+                        sh "python -m sphinx -b doctest docs/source build/docs -d build/docs/doctrees -v"
+//                         bat "python -m sphinx -b doctest docs\\source build\\docs -d build\\docs\\doctrees -v"
                     }
                     post{
                         cleanup{
@@ -241,16 +256,27 @@ pipeline {
                     }
                 }
                 stage("Run Flake8 Static Analysis") {
+//                     agent {
+//                         dockerfile {
+//                             filename 'ci/docker/python37/windows/build/msvc/Dockerfile'
+//                             label "windows && docker"
+//                         }
+//                     }
                     agent {
                         dockerfile {
-                            filename 'ci/docker/python37/windows/build/msvc/Dockerfile'
-                            label "windows && docker"
+                            filename 'ci/docker/python/linux/testing/Dockerfile'
+                            label 'linux && docker'
                         }
                     }
                     steps{
-                        bat "if not exist logs mkdir logs"
+//                         bat "if not exist logs mkdir logs"
                         catchError(buildResult: 'SUCCESS', message: 'flake8 found some warnings', stageResult: 'UNSTABLE') {
-                            bat "flake8 pyhathiprep --tee --output-file=logs\\flake8.log"
+                            sh(label: "Running flake8",
+                               script: """mkdir -p logs
+                                          flake8 pyhathiprep --tee --output-file=logs/flake8.log
+                                          """
+                            )
+//                             bat "flake8 pyhathiprep --tee --output-file=logs\\flake8.log"
                         }
                     }
                     post {
@@ -272,10 +298,16 @@ pipeline {
                     }
                 }
                 stage("Run Tox"){
+//                     agent {
+//                         dockerfile {
+//                             filename 'ci/docker/python37/windows/build/msvc/Dockerfile'
+//                             label "windows && docker"
+//                         }
+//                     }
                     agent {
                         dockerfile {
-                            filename 'ci/docker/python37/windows/build/msvc/Dockerfile'
-                            label "windows && docker"
+                            filename 'ci/docker/python/linux/testing/Dockerfile'
+                            label 'linux && docker'
                         }
                     }
                     when{
@@ -285,12 +317,12 @@ pipeline {
                     steps {
                         script{
                             try{
-                                bat (
+                                sh (
                                     label: "Run Tox",
                                     script: "tox -e py --workdir .tox -v"
                                 )
                             } catch (exc) {
-                                bat (
+                                sh (
                                     label: "Run Tox with new environments",
                                     script: "tox --recreate -e py  --workdir .tox -v"
                                 )
