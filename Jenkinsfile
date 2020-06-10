@@ -70,7 +70,6 @@ pipeline {
                     label 'linux && docker'
                 }
             }
-
             steps{
                 sh "python setup.py dist_info"
             }
@@ -82,17 +81,25 @@ pipeline {
             }
         }
         stage("Build"){
+//             agent {
+//               dockerfile {
+//                 filename 'ci/docker/python37/windows/build/msvc/Dockerfile'
+//                 label "windows && docker"
+//               }
+//             }
             agent {
-              dockerfile {
-                filename 'ci/docker/python37/windows/build/msvc/Dockerfile'
-                label "windows && docker"
-              }
+                dockerfile {
+                    filename 'ci/docker/python/linux/testing/Dockerfile'
+                    label 'linux && docker'
+                }
             }
             stages{
                 stage("Python Package"){
                     steps {
-                        bat "if not exist logs mkdir logs"
-                        powershell "& python setup.py build -b build   | tee ${WORKSPACE}\\logs\\build.log"
+                        sh(script: """mkdir -p logs
+                                      python setup.py build -b build | tee logs/build.log"
+                                      """
+                        )
                     }
                     post{
                         always{
@@ -112,7 +119,13 @@ pipeline {
                 }
                 stage("Building Sphinx Documentation"){
                     steps {
-                        bat(label:"Building docs on ${env.NODE_NAME}", script: "python -m sphinx docs/source build/docs/html -d build/docs/.doctrees -v -w logs\\build_sphinx.log")
+                        sh(
+                            label: "Building docs on ${env.NODE_NAME}",
+                            script: """mkdir -p logs
+                                       python -m sphinx docs/source build/docs/html -d build/docs/.doctrees -v -w logs/build_sphinx.log"""
+                        )
+//                         bat(label:"Building docs on ${env.NODE_NAME}",
+//                         script: "python -m sphinx docs/source build/docs/html -d build/docs/.doctrees -v -w logs\\build_sphinx.log")
                     }
                     post{
                         always {
