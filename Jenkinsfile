@@ -518,6 +518,7 @@ pipeline {
                     }
                     steps {
                         unstash "DIST-INFO"
+                        sh "ls"
                         script{
                             def props = readProperties interpolate: true, file: "HathiZip.dist-info/METADATA"
                             sh(label: "Connecting to Devpi Server",
