@@ -293,11 +293,10 @@ pipeline {
                             additionalBuildArgs '--build-arg USER_ID=$(id -u) --build-arg GROUP_ID=$(id -g)'
                         }
                     }
-                    options{
-                        timeout(5)
-                    }
                     steps{
-                        sh "python setup.py sdist --format zip -d dist bdist_wheel -d dist"
+                        timeout(5){
+                            sh "python setup.py sdist --format zip -d dist bdist_wheel -d dist"
+                        }
 
                     }
                     post{
@@ -329,13 +328,10 @@ pipeline {
                         equals expected: true, actual: params.PACKAGE_CX_FREEZE
                         beforeAgent true
                     }
-                    options{
-                        timeout(15)
-                    }
                     steps{
-                        bat "python cx_setup.py bdist_msi --add-to-path=true -k --bdist-dir build/msi -d dist"
-
-
+                        timeout(15){
+                            bat "python cx_setup.py bdist_msi --add-to-path=true -k --bdist-dir build/msi -d dist"
+                        }
                     }
                     post{
                         success{
@@ -391,21 +387,20 @@ pipeline {
                             additionalBuildArgs '--build-arg USER_ID=$(id -u) --build-arg GROUP_ID=$(id -g)'
                           }
                     }
-                    options{
-                        timeout(5)
-                    }
                     steps {
-                        unstash "DOCS_ARCHIVE"
-                        unstash "dist"
-                        sh(
-                                label: "Connecting to DevPi Server",
-                                script: 'devpi use https://devpi.library.illinois.edu --clientdir ${WORKSPACE}/devpi && devpi login $DEVPI_USR --password $DEVPI_PSW --clientdir ${WORKSPACE}/devpi'
-                            )
+                        timeout(5){
+                            unstash "DOCS_ARCHIVE"
+                            unstash "dist"
+                            sh(
+                                    label: "Connecting to DevPi Server",
+                                    script: 'devpi use https://devpi.library.illinois.edu --clientdir ${WORKSPACE}/devpi && devpi login $DEVPI_USR --password $DEVPI_PSW --clientdir ${WORKSPACE}/devpi'
+                                )
                             sh(
                                 label: "Uploading to DevPi Staging",
                                 script: """devpi use /${env.DEVPI_USR}/${env.BRANCH_NAME}_staging --clientdir ${WORKSPACE}/devpi
-    devpi upload --from-dir dist --clientdir ${WORKSPACE}/devpi"""
+                                           devpi upload --from-dir dist --clientdir ${WORKSPACE}/devpi"""
                             )
+                        }
 
                     }
                     post{
