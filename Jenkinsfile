@@ -211,7 +211,7 @@ pipeline {
                         catchError(buildResult: 'SUCCESS', message: 'flake8 found some warnings', stageResult: 'UNSTABLE') {
                             sh(label: "Running flake8",
                                script: """mkdir -p logs
-                                          flake8 pyhathiprep --tee --output-file=logs/flake8.log
+                                          flake8 hathizip --tee --output-file=logs/flake8.log
                                           """
                             )
                         }
