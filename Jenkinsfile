@@ -11,6 +11,10 @@ CONFIGURATIONS = [
     "3.7": [
         test_docker_image: "python:3.7",
         tox_env: "py37"
+        ],
+    "3.8": [
+        test_docker_image: "python:3.8",
+        tox_env: "py38"
         ]
 ]
 
@@ -418,7 +422,7 @@ pipeline {
                             }
                             axis {
                                 name 'PYTHON_VERSION'
-                                values '3.6', "3.7"
+                                values '3.8', "3.7", '3.6'
                             }
                         }
                         agent {
