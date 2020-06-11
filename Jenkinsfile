@@ -524,6 +524,7 @@ pipeline {
                             sh(label: "Connecting to Devpi Server",
                                script: 'devpi use https://devpi.library.illinois.edu --clientdir ./devpi'
                             )
+                            sh "ls"
                             sh(label: "Log into Server",
                                script: "devpi login ${DEVPI_USR} --password ${DEVPI_PSW} --clientdir ./devpi"
                             )
