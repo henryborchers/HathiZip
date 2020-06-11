@@ -508,7 +508,7 @@ pipeline {
                     }
                     agent {
                         dockerfile {
-                            filename 'ci/docker/python/linux/testing/Dockerfile'
+                            filename 'ci/docker/deploy/devpi/deploy/Dockerfile'
                             label 'linux&&docker'
                             additionalBuildArgs '--build-arg USER_ID=$(id -u) --build-arg GROUP_ID=$(id -g)'
                           }
@@ -518,19 +518,14 @@ pipeline {
                     }
                     steps {
                         unstash "DIST-INFO"
-                        sh "ls"
                         script{
-                            sh(label: "Connecting to Devpi Server",
-                               script: 'devpi use https://devpi.library.illinois.edu --clientdir ./devpi'
-                            )
-                            sh "ls"
-                            sh(label: "Log into Server",
-                               script: "devpi login ${DEVPI_USR} --password ${DEVPI_PSW} --clientdir ./devpi"
-                            )
-
                             def props = readProperties interpolate: true, file: "HathiZip.dist-info/METADATA"
                             sh(label: "Pushing to production index",
-                               script:"devpi push --index DS_Jenkins/${env.BRANCH_NAME}_staging ${props.Name}==${props.Version} production/release --clientdir ./devpi"
+                               script: """devpi use https://devpi.library.illinois.edu --clientdir ./devpi
+                                          devpi login $DEVPI_USR --password $DEVPI_PSW --clientdir ./devpi
+                                          devpi push --index DS_Jenkins/${env.BRANCH_NAME}_staging ${props.Name}==${props.Version} production/release --clientdir ./devpi
+                                       """
+                            )
                            )
                         }
                     }
