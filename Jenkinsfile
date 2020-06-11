@@ -363,6 +363,7 @@ pipeline {
                     }
                 }
                 beforeAgent true
+                beforeOptions true
             }
             options{
                 timestamps()
