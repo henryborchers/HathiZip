@@ -376,7 +376,6 @@ pipeline {
             environment{
                 DEVPI = credentials("DS_devpi")
             }
-
             stages{
                 stage("Uploading to DevPi Staging"){
 
@@ -521,11 +520,10 @@ pipeline {
                         unstash "DIST-INFO"
                         script{
                             def props = readProperties interpolate: true, file: "HathiZip.dist-info/METADATA"
-                            sh(
-                                label: "Pushing to DS_Jenkins/${env.BRANCH_NAME} index",
-                                script: """devpi use https://devpi.library.illinois.edu --clientdir ${WORKSPACE}/devpi
-                                           devpi login $DEVPI_USR --password $DEVPI_PSW --clientdir ${WORKSPACE}/devpi
-                                           devpi push --index DS_Jenkins/${env.BRANCH_NAME}_staging ${props.Name}==${props.Version} production/release --clientdir ${WORKSPACE}/devpi"""
+                            sh(label: "Pushing to DS_Jenkins/${env.BRANCH_NAME} index",
+                               script: """devpi use https://devpi.library.illinois.edu --clientdir ./devpi
+                                          devpi login $DEVPI_USR --password $DEVPI_PSW --clientdir ./devpi
+                                          devpi push --index DS_Jenkins/${env.BRANCH_NAME}_staging ${props.Name}==${props.Version} production/release --clientdir ./devpi"""
                             )
                         }
                     }
