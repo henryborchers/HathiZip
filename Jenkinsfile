@@ -30,6 +30,7 @@ pipeline {
         booleanParam(name: "PACKAGE_CX_FREEZE", defaultValue: false, description: "Create a package with CX_Freeze")
         booleanParam(name: "DEPLOY_DEVPI", defaultValue: false, description: "Deploy to devpi on https://devpi.library.illinois.edu/DS_Jenkins/${env.BRANCH_NAME}")
         booleanParam(name: "DEPLOY_DEVPI_PRODUCTION", defaultValue: false, description: "Deploy to https://devpi.library.illinois.edu/production/release")
+        booleanParam(name: "DEPLOY_ADD_TAG", defaultValue: false, description: "Tag commit to current version")
         booleanParam(name: "DEPLOY_SCCM", defaultValue: false, description: "Deploy to SCCM")
         booleanParam(name: "UPDATE_DOCS", defaultValue: false, description: "Update online documentation")
 
@@ -199,9 +200,7 @@ pipeline {
                             publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, keepAll: false, reportDir: 'reports/mypy/mypy_html', reportFiles: 'index.html', reportName: 'MyPy', reportTitles: ''])
                             recordIssues(tools: [myPy(name: 'MyPy', pattern: 'logs/mypy.log')])
                         }
-                        cleanup{
-                            deleteDir()
-                        }
+
                     }
                 }
                 stage("Run Flake8 Static Analysis") {
@@ -528,7 +527,55 @@ pipeline {
                 }
             }
         }
-
+        stage("Deploy"){
+            stages{
+                stage("Tagging git Commit"){
+                    agent {
+                        dockerfile {
+                            filename 'ci/docker/python/linux/testing/Dockerfile'
+                            label 'linux && docker'
+                        }
+                    }
+                    when{
+                        allOf{
+                            equals expected: true, actual: params.DEPLOY_ADD_TAG
+                        }
+                        beforeAgent true
+                        beforeInput true
+                    }
+                    options{
+                        timeout(time: 1, unit: 'DAYS')
+                        retry(3)
+                    }
+                    input {
+                          message 'Add a version tag to git commit?'
+                          parameters {
+                                credentials credentialType: 'com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl', defaultValue: 'github.com', description: '', name: 'gitCreds', required: true
+                          }
+                    }
+                    steps{
+                        unstash "DIST-INFO"
+                        script{
+                            def props = readProperties interpolate: true, file: "HathiZip.dist-info/METADATA"
+                            def commitTag = input message: 'git commit', parameters: [string(defaultValue: "v${props.Version}", description: 'Version to use a a git tag', name: 'Tag', trim: false)]
+                            withCredentials([usernamePassword(credentialsId: gitCreds, passwordVariable: 'password', usernameVariable: 'username')]) {
+                                sh(label: "Tagging ${commitTag}",
+                                   script: """git config --local credential.helper "!f() { echo username=\\$username; echo password=\\$password; }; f"
+                                              git tag -a ${commitTag} -m 'Tagged by Jenkins'
+                                              git push origin --tags
+                                   """
+                                )
+                            }
+                        }
+                    }
+                    post{
+                        cleanup{
+                            deleteDir()
+                        }
+                    }
+                }
+            }
+        }
         stage("Deploy to SCCM") {
             when{
                 allOf{
