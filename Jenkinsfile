@@ -526,7 +526,6 @@ pipeline {
                                           devpi push --index DS_Jenkins/${env.BRANCH_NAME}_staging ${props.Name}==${props.Version} production/release --clientdir ./devpi
                                        """
                             )
-                           )
                         }
                     }
                 }
