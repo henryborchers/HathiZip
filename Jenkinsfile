@@ -507,7 +507,7 @@ pipeline {
                     }
                     agent {
                         dockerfile {
-                            filename 'CI/docker/deploy/devpi/deploy/Dockerfile'
+                            filename 'ci/docker/python/linux/testing/Dockerfile'
                             label 'linux&&docker'
                             additionalBuildArgs '--build-arg USER_ID=$(id -u) --build-arg GROUP_ID=$(id -g)'
                           }
