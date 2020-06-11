@@ -431,15 +431,14 @@ pipeline {
                         }
                         stages{
                             stage("Testing DevPi Package"){
-                                options{
-                                    timeout(10)
-                                }
                                 steps{
-                                    script{
+                                    timeout(10){
                                         unstash "DIST-INFO"
-                                        def props = readProperties interpolate: true, file: 'HathiZip.dist-info/METADATA'
-                                        bat "devpi use https://devpi.library.illinois.edu --clientdir certs\\ && devpi login %DEVPI_USR% --password %DEVPI_PSW% --clientdir certs\\ && devpi use ${env.BRANCH_NAME}_staging --clientdir certs\\"
-                                        bat "devpi test --index ${env.BRANCH_NAME}_staging ${props.Name}==${props.Version} -s ${FORMAT} --clientdir certs\\ -e ${CONFIGURATIONS[PYTHON_VERSION].tox_env} -v"
+                                        script{
+                                            def props = readProperties interpolate: true, file: 'HathiZip.dist-info/METADATA'
+                                            bat "devpi use https://devpi.library.illinois.edu --clientdir certs\\ && devpi login %DEVPI_USR% --password %DEVPI_PSW% --clientdir certs\\ && devpi use ${env.BRANCH_NAME}_staging --clientdir certs\\"
+                                            bat "devpi test --index ${env.BRANCH_NAME}_staging ${props.Name}==${props.Version} -s ${FORMAT} --clientdir certs\\ -e ${CONFIGURATIONS[PYTHON_VERSION].tox_env} -v"
+                                        }
                                     }
                                 }
                                 post{
