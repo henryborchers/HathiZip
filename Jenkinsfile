@@ -520,11 +520,14 @@ pipeline {
                         unstash "DIST-INFO"
                         script{
                             def props = readProperties interpolate: true, file: "HathiZip.dist-info/METADATA"
-                            sh(label: "Pushing to DS_Jenkins/${env.BRANCH_NAME} index",
-                               script: """devpi use https://devpi.library.illinois.edu --clientdir ./devpi
+                            sh(label: "Connecting to DS_Jenkins/${env.BRANCH_NAME} index",
+                               script: '''devpi use https://devpi.library.illinois.edu --clientdir ./devpi
                                           devpi login $DEVPI_USR --password $DEVPI_PSW --clientdir ./devpi
-                                          devpi push --index DS_Jenkins/${env.BRANCH_NAME}_staging ${props.Name}==${props.Version} production/release --clientdir ./devpi"""
+                                          '''
                             )
+                            sh(label: "Pushing to production index",
+                               script:"devpi push --index DS_Jenkins/${env.BRANCH_NAME}_staging ${props.Name}==${props.Version} production/release --clientdir ./devpi"
+                           )
                         }
                     }
                 }
