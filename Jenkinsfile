@@ -1,8 +1,3 @@
-#!groovy
-@Library("ds-utils")
-import org.ds.*
-
-@Library(["devpi", "PythonHelpers"]) _
 CONFIGURATIONS = [
     '3.6': [
         test_docker_image: "python:3.6-windowsservercore",
@@ -23,6 +18,11 @@ pipeline {
     agent none
     triggers {
        parameterizedCron '@daily % PACKAGE_CX_FREEZE=true; DEPLOY_DEVPI=true; TEST_RUN_TOX=true'
+    }
+    libraries {
+      lib('devpi')
+      lib('PythonHelpers')
+      lib('ds-utils')
     }
     parameters {
         string(name: "PROJECT_NAME", defaultValue: "HathiTrust Zip for Submit", description: "Name given to the project")
@@ -369,6 +369,7 @@ pipeline {
                 timestamps()
                 lock("HathiZip-devpi")
             }
+
             agent none
             environment{
                 DEVPI = credentials("DS_devpi")
@@ -376,6 +377,7 @@ pipeline {
 
             stages{
                 stage("Uploading to DevPi Staging"){
+
                     agent {
                         dockerfile {
                             filename 'ci/docker/deploy/devpi/deploy/Dockerfile'
