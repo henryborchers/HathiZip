@@ -323,7 +323,6 @@ pipeline {
                         timeout(15)
                     }
                     steps{
-                        //bat "venv\\Scripts\\pip.exe install -r source\\requirements.txt -r source\\requirements-freeze.txt -r source\\requirements-dev.txt -q"
                         bat "python cx_setup.py bdist_msi --add-to-path=true -k --bdist-dir build/msi -d dist"
 
 
