@@ -315,7 +315,7 @@ pipeline {
                 stage("Windows CX_Freeze MSI"){
                     agent {
                         dockerfile {
-                            filename 'ci/docker/python37/windows/build/msvc/Dockerfile'
+                            filename 'ci/docker/python/windows/build/msvc/Dockerfile'
                             label "windows && docker"
                         }
                     }
