@@ -1,8 +1,3 @@
-#!groovy
-@Library("ds-utils")
-import org.ds.*
-
-@Library(["devpi", "PythonHelpers"]) _
 CONFIGURATIONS = [
     '3.6': [
         test_docker_image: "python:3.6-windowsservercore",
@@ -11,23 +6,28 @@ CONFIGURATIONS = [
     "3.7": [
         test_docker_image: "python:3.7",
         tox_env: "py37"
+        ],
+    "3.8": [
+        test_docker_image: "python:3.8",
+        tox_env: "py38"
         ]
 ]
 
 
 pipeline {
     agent none
-    options {
-        disableConcurrentBuilds()  //each branch has 1 job running at a time
-    }
     triggers {
        parameterizedCron '@daily % PACKAGE_CX_FREEZE=true; DEPLOY_DEVPI=true; TEST_RUN_TOX=true'
+    }
+    libraries {
+      lib('devpi')
+      lib('PythonHelpers')
+      lib('ds-utils')
     }
     parameters {
         string(name: "PROJECT_NAME", defaultValue: "HathiTrust Zip for Submit", description: "Name given to the project")
         booleanParam(name: "TEST_RUN_TOX", defaultValue: false, description: "Run Tox Tests")
         booleanParam(name: "PACKAGE_CX_FREEZE", defaultValue: false, description: "Create a package with CX_Freeze")
-        // TODO: set this to false
         booleanParam(name: "DEPLOY_DEVPI", defaultValue: false, description: "Deploy to devpi on https://devpi.library.illinois.edu/DS_Jenkins/${env.BRANCH_NAME}")
         booleanParam(name: "DEPLOY_DEVPI_PRODUCTION", defaultValue: false, description: "Deploy to https://devpi.library.illinois.edu/production/release")
         booleanParam(name: "DEPLOY_SCCM", defaultValue: false, description: "Deploy to SCCM")
@@ -35,47 +35,37 @@ pipeline {
 
     }
     stages {
-        stage("Stashing important files for later"){
-            agent {
+        stage("Getting Distribution Info"){
+           agent {
                 dockerfile {
-                    filename 'ci/docker/python37/windows/build/msvc/Dockerfile'
-                    label "windows && docker"
+                    filename 'ci/docker/python/linux/testing/Dockerfile'
+                    label 'linux && docker'
                 }
             }
             steps{
-                bat "python setup.py dist_info"
+                sh "python setup.py dist_info"
             }
             post{
                 success{
                     stash includes: "HathiZip.dist-info/**", name: 'DIST-INFO'
                     archiveArtifacts artifacts: "HathiZip.dist-info/**"
-                    stash includes: 'deployment.yml', name: "Deployment"
-                }
-                cleanup{
-                    cleanWs(
-                        deleteDirs: true,
-                        patterns: [
-                            [pattern: "dist/", type: 'INCLUDE'],
-                            [pattern: "HathiZip.dist-info/", type: 'INCLUDE'],
-                            [pattern: 'build/', type: 'INCLUDE']
-                        ]
-                    )
                 }
             }
         }
-
         stage("Build"){
             agent {
-              dockerfile {
-                filename 'ci/docker/python37/windows/build/msvc/Dockerfile'
-                label "windows && docker"
-              }
+                dockerfile {
+                    filename 'ci/docker/python/linux/testing/Dockerfile'
+                    label 'linux && docker'
+                }
             }
             stages{
                 stage("Python Package"){
                     steps {
-                        bat "if not exist logs mkdir logs"
-                        powershell "& python setup.py build -b build   | tee ${WORKSPACE}\\logs\\build.log"
+                        sh(script: """mkdir -p logs
+                                      python setup.py build -b build | tee logs/build.log
+                                      """
+                        )
                     }
                     post{
                         always{
@@ -95,7 +85,12 @@ pipeline {
                 }
                 stage("Building Sphinx Documentation"){
                     steps {
-                        bat(label:"Building docs on ${env.NODE_NAME}", script: "python -m sphinx docs/source build/docs/html -d build/docs/.doctrees -v -w logs\\build_sphinx.log")
+                        sh(
+                            label: "Building docs on ${env.NODE_NAME}",
+                            script: """mkdir -p logs
+                                       python -m sphinx docs/source build/docs/html -d build/docs/.doctrees -v -w logs/build_sphinx.log
+                                       """
+                        )
                     }
                     post{
                         always {
@@ -135,13 +130,14 @@ pipeline {
                 stage("PyTest"){
                     agent {
                         dockerfile {
-                            filename 'ci/docker/python37/windows/build/msvc/Dockerfile'
-                            label "windows && docker"
+                            filename 'ci/docker/python/linux/testing/Dockerfile'
+                            label 'linux && docker'
                         }
                     }
                     steps{
-                        bat "python -m pytest --junitxml=reports/junit-${env.NODE_NAME}-pytest.xml --junit-prefix=${env.NODE_NAME}-pytest --cov-report html:reports/coverage/ --cov=hathizip" //  --basetemp={envtmpdir}"
-
+                        sh(label: "Running pytest",
+                            script: """python -m pytest --junitxml=reports/junit-${env.NODE_NAME}-pytest.xml --junit-prefix=${env.NODE_NAME}-pytest --cov-report html:reports/coverage/ --cov=hathizip"""
+                        )
                     }
                     post {
                         always{
@@ -151,7 +147,6 @@ pipeline {
                                     report_files.each { report_file ->
                                         echo "Found ${report_file}"
                                         junit "${report_file}"
-                                        bat "del ${report_file}"
                                     }
                                 }
                             }
@@ -162,12 +157,12 @@ pipeline {
                 stage("Doctest"){
                     agent {
                         dockerfile {
-                            filename 'ci/docker/python37/windows/build/msvc/Dockerfile'
-                            label "windows && docker"
+                            filename 'ci/docker/python/linux/testing/Dockerfile'
+                            label 'linux && docker'
                         }
                     }
                     steps{
-                        bat "python -m sphinx -b doctest docs\\source build\\docs -d build\\docs\\doctrees -v"
+                        sh "python -m sphinx -b doctest docs/source build/docs -d build/docs/doctrees -v"
                     }
                     post{
                         cleanup{
@@ -212,19 +207,21 @@ pipeline {
                 stage("Run Flake8 Static Analysis") {
                     agent {
                         dockerfile {
-                            filename 'ci/docker/python37/windows/build/msvc/Dockerfile'
-                            label "windows && docker"
+                            filename 'ci/docker/python/linux/testing/Dockerfile'
+                            label 'linux && docker'
                         }
                     }
                     steps{
-                        bat "if not exist logs mkdir logs"
                         catchError(buildResult: 'SUCCESS', message: 'flake8 found some warnings', stageResult: 'UNSTABLE') {
-                            bat "flake8 pyhathiprep --tee --output-file=logs\\flake8.log"
+                            sh(label: "Running flake8",
+                               script: """mkdir -p logs
+                                          flake8 hathizip --tee --output-file=logs/flake8.log
+                                          """
+                            )
                         }
                     }
                     post {
                         always {
-
                             recordIssues(tools: [flake8(name: 'Flake8', pattern: 'logs/flake8.log')])
                         }
                         cleanup{
@@ -243,8 +240,8 @@ pipeline {
                 stage("Run Tox"){
                     agent {
                         dockerfile {
-                            filename 'ci/docker/python37/windows/build/msvc/Dockerfile'
-                            label "windows && docker"
+                            filename 'ci/docker/python/linux/testing/Dockerfile'
+                            label 'linux && docker'
                         }
                     }
                     when{
@@ -254,12 +251,12 @@ pipeline {
                     steps {
                         script{
                             try{
-                                bat (
+                                sh (
                                     label: "Run Tox",
                                     script: "tox -e py --workdir .tox -v"
                                 )
                             } catch (exc) {
-                                bat (
+                                sh (
                                     label: "Run Tox with new environments",
                                     script: "tox --recreate -e py  --workdir .tox -v"
                                 )
@@ -286,15 +283,15 @@ pipeline {
                 stage("Source and Wheel formats"){
                     agent {
                         dockerfile {
-                            filename 'ci/docker/python37/windows/build/msvc/Dockerfile'
-                            label "windows && docker"
+                            filename 'ci/docker/python/linux/testing/Dockerfile'
+                            label 'linux && docker'
                         }
                     }
                     options{
                         timeout(5)
                     }
                     steps{
-                        bat "python setup.py sdist --format zip -d dist bdist_wheel -d dist"
+                        sh "python setup.py sdist --format zip -d dist bdist_wheel -d dist"
 
                     }
                     post{
@@ -318,7 +315,7 @@ pipeline {
                 stage("Windows CX_Freeze MSI"){
                     agent {
                         dockerfile {
-                            filename 'ci/docker/python37/windows/build/msvc/Dockerfile'
+                            filename 'ci/docker/python/windows/build/msvc/Dockerfile'
                             label "windows && docker"
                         }
                     }
@@ -330,7 +327,6 @@ pipeline {
                         timeout(15)
                     }
                     steps{
-                        //bat "venv\\Scripts\\pip.exe install -r source\\requirements.txt -r source\\requirements-freeze.txt -r source\\requirements-dev.txt -q"
                         bat "python cx_setup.py bdist_msi --add-to-path=true -k --bdist-dir build/msi -d dist"
 
 
@@ -360,7 +356,6 @@ pipeline {
                 allOf{
                     anyOf{
                         equals expected: true, actual: params.DEPLOY_DEVPI
-                        triggeredBy "TimerTriggerCause"
                     }
                     anyOf {
                         equals expected: "master", actual: env.BRANCH_NAME
@@ -368,10 +363,13 @@ pipeline {
                     }
                 }
                 beforeAgent true
+                beforeOptions true
             }
             options{
                 timestamps()
+                lock("HathiZip-devpi")
             }
+
             agent none
             environment{
                 DEVPI = credentials("DS_devpi")
@@ -379,6 +377,7 @@ pipeline {
 
             stages{
                 stage("Uploading to DevPi Staging"){
+
                     agent {
                         dockerfile {
                             filename 'ci/docker/deploy/devpi/deploy/Dockerfile'
@@ -425,7 +424,7 @@ pipeline {
                             }
                             axis {
                                 name 'PYTHON_VERSION'
-                                values '3.6', "3.7"
+                                values '3.8', "3.7", '3.6'
                             }
                         }
                         agent {
@@ -437,15 +436,14 @@ pipeline {
                         }
                         stages{
                             stage("Testing DevPi Package"){
-                                options{
-                                    timeout(10)
-                                }
                                 steps{
-                                    script{
+                                    timeout(10){
                                         unstash "DIST-INFO"
-                                        def props = readProperties interpolate: true, file: 'HathiZip.dist-info/METADATA'
-                                        bat "devpi use https://devpi.library.illinois.edu --clientdir certs\\ && devpi login %DEVPI_USR% --password %DEVPI_PSW% --clientdir certs\\ && devpi use ${env.BRANCH_NAME}_staging --clientdir certs\\"
-                                        bat "devpi test --index ${env.BRANCH_NAME}_staging ${props.Name}==${props.Version} -s ${FORMAT} --clientdir certs\\ -e ${CONFIGURATIONS[PYTHON_VERSION].tox_env} -v"
+                                        script{
+                                            def props = readProperties interpolate: true, file: 'HathiZip.dist-info/METADATA'
+                                            bat "devpi use https://devpi.library.illinois.edu --clientdir certs\\ && devpi login %DEVPI_USR% --password %DEVPI_PSW% --clientdir certs\\ && devpi use ${env.BRANCH_NAME}_staging --clientdir certs\\"
+                                            bat "devpi test --index ${env.BRANCH_NAME}_staging ${props.Name}==${props.Version} -s ${FORMAT} --clientdir certs\\ -e ${CONFIGURATIONS[PYTHON_VERSION].tox_env} -v"
+                                        }
                                     }
                                 }
                                 post{

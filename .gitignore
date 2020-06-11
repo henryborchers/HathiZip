@@ -94,7 +94,7 @@ wheels/
 pip-log.txt
 pip-delete-this-directory.txt
 
-# Unit test / coverage reports
+# Unit testing / coverage reports
 htmlcov/
 .tox/
 .coverage

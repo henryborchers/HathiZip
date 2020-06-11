@@ -3,5 +3,7 @@ wheel
 sphinx
 pytest
 pytest-runner
+pytest-cov
 tox
 lxml
+flake8

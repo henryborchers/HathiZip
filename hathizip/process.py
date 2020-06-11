@@ -9,7 +9,7 @@ from collections import namedtuple
 PackageFile = namedtuple("PackageFile", ("absolute_path", "archive_path"))
 
 
-# TODO: create get_files test
+# TODO: create get_files testing
 def get_files(path)->typing.Iterator[PackageFile]:
     """Find files relative to a given path
 
