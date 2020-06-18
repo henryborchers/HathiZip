@@ -472,6 +472,9 @@ pipeline {
                         beforeAgent true
                         beforeInput true
                     }
+                    options{
+                        timeout(time: 1, unit: 'DAYS')
+                    }
                     agent {
                         dockerfile {
                             filename 'ci/docker/deploy/devpi/deploy/Dockerfile'
