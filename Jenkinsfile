@@ -16,9 +16,6 @@ CONFIGURATIONS = [
 
 pipeline {
     agent none
-    triggers {
-       parameterizedCron '@daily % PACKAGE_CX_FREEZE=true; DEPLOY_DEVPI=true; TEST_RUN_TOX=true'
-    }
     libraries {
       lib('devpi')
       lib('PythonHelpers')
