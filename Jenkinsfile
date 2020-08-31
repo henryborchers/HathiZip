@@ -12,8 +12,29 @@ CONFIGURATIONS = [
         tox_env: "py38"
         ]
 ]
-
-
+node('linux && docker') {
+    timeout(2){
+        ws{
+            checkout scm
+            try{
+                docker.image('python:3.8').inside {
+                    stage("Getting Distribution Info"){
+                        sh(
+                           label: "Running setup.py with dist_info",
+                           script: """python --version
+                                      python setup.py dist_info
+                                   """
+                        )
+                        stash includes: "HathiZip.dist-info/**", name: 'DIST-INFO'
+                        archiveArtifacts artifacts: "HathiZip.dist-info/**"
+                    }
+                }
+            } finally{
+                deleteDir()
+            }
+        }
+    }
+}
 pipeline {
     agent none
     libraries {
@@ -33,24 +54,6 @@ pipeline {
 
     }
     stages {
-        stage("Getting Distribution Info"){
-           agent {
-                dockerfile {
-                    filename 'ci/docker/python/linux/testing/Dockerfile'
-                    label 'linux && docker'
-                    additionalBuildArgs '--build-arg USER_ID=$(id -u) --build-arg GROUP_ID=$(id -g)'
-                }
-            }
-            steps{
-                sh "python setup.py dist_info"
-            }
-            post{
-                success{
-                    stash includes: "HathiZip.dist-info/**", name: 'DIST-INFO'
-                    archiveArtifacts artifacts: "HathiZip.dist-info/**"
-                }
-            }
-        }
         stage("Build"){
             agent {
                 dockerfile {
