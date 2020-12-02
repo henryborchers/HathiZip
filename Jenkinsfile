@@ -253,13 +253,13 @@ pipeline {
                     }
                     steps {
                         script{
-                            def windowsJobs
-                            def linuxJobs
+                            def windowsJobs = [:]
+                            def linuxJobs = [:]
                             stage("Scanning Tox Environments"){
                                 parallel(
                                     "Linux":{
                                         linuxJobs = tox.getToxTestsParallel(
-                                                envNamePrefix: "Tox Linux",
+                                                envNamePrefix: "Tox",
                                                 label: "linux && docker",
                                                 dockerfile: 'ci/docker/python/linux/tox/Dockerfile',
                                                 dockerArgs: "--build-arg PIP_EXTRA_INDEX_URL --build-arg PIP_INDEX_URL"
@@ -268,7 +268,7 @@ pipeline {
                                     "Windows":{
 //                                         windowsJobs = tox.getToxTestsParallel("Tox Windows", "windows && docker", "ci/docker/python/windows/tox/Dockerfile", "--build-arg PIP_EXTRA_INDEX_URL --build-arg PIP_INDEX_URL --build-arg CHOCOLATEY_SOURCE")
                                         windowsJobs = tox.getToxTestsParallel(
-                                                envNamePrefix: "Tox Windows",
+                                                envNamePrefix: "Tox",
                                                 label: "windows && docker",
                                                 dockerfile: "ci/docker/python/windows/tox/Dockerfile",
                                                 dockerArgs: '--build-arg PIP_EXTRA_INDEX_URL --build-arg PIP_INDEX_URL --build-arg CHOCOLATEY_SOURCE'
