@@ -84,7 +84,7 @@ pipeline {
                 dockerfile {
                     filename 'ci/docker/python/linux/testing/Dockerfile'
                     label 'linux && docker'
-                    additionalBuildArgs '--build-arg USER_ID=$(id -u) --build-arg GROUP_ID=$(id -g)'
+                    additionalBuildArgs '--build-arg USER_ID=$(id -u) --build-arg GROUP_ID=$(id -g) --build-arg PIP_EXTRA_INDEX_URL --build-arg PIP_TRUSTED_HOST'
                 }
             }
             stages{
@@ -155,127 +155,145 @@ pipeline {
                 stage("Code Quality"){
                     stages{
                         stage("Run test"){
-                            parallel{
-                                stage("PyTest"){
-                                    agent {
-                                        dockerfile {
-                                            filename 'ci/docker/python/linux/testing/Dockerfile'
-                                            label 'linux && docker'
-                                            additionalBuildArgs '--build-arg USER_ID=$(id -u) --build-arg GROUP_ID=$(id -g)'
-                                        }
-                                    }
+                            agent {
+                                dockerfile {
+                                    filename 'ci/docker/python/linux/testing/Dockerfile'
+                                    label 'linux && docker'
+                                    additionalBuildArgs '--build-arg USER_ID=$(id -u) --build-arg GROUP_ID=$(id -g)'
+                                }
+                            }
+                            stages{
+                                stage("Set up Tests"){
                                     steps{
-
-                                        sh(label: "Running pytest",
-                                            script: 'coverage run --parallel-mode --source=hathizip -m pytest --junitxml=./reports/tests/pytest/pytest-junit.xml'
-//                                             script: """python -m pytest --junitxml=reports/junit-${env.NODE_NAME}-pytest.xml --junit-prefix=${env.NODE_NAME}-pytest --cov-report html:reports/coverage/ --cov=hathizip"""
-                                        )
-                                    }
-                                    post {
-                                        always{
-                                            stash includes: 'reports/tests/pytest/*.xml', name: 'PYTEST_UNIT_TEST_RESULTS'
-                                            junit 'reports/tests/pytest/pytest-junit.xml'
-//                                             dir("reports"){
-//                                                 script{
-//                                                     def report_files = findFiles glob: '**/*.pytest.xml'
-//                                                     report_files.each { report_file ->
-//                                                         echo "Found ${report_file}"
-//                                                         junit "${report_file}"
-//                                                     }
-//                                                 }
-//                                             }
-//                                             publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, keepAll: false, reportDir: 'reports/coverage', reportFiles: 'index.html', reportName: 'Coverage', reportTitles: ''])
-                                        }
+                                        sh '''mkdir -p logs
+                                              python setup.py build
+                                              mkdir -p reports
+                                              '''
                                     }
                                 }
-                                stage("Doctest"){
-                                    agent {
-                                        dockerfile {
-                                            filename 'ci/docker/python/linux/testing/Dockerfile'
-                                            label 'linux && docker'
-                                            additionalBuildArgs '--build-arg USER_ID=$(id -u) --build-arg GROUP_ID=$(id -g)'
+                                stage("Run Tests"){
+                                    parallel{
+                                        stage("PyTest"){
+                                            steps{
+                                                sh(label: "Running pytest",
+                                                    script: 'coverage run --parallel-mode --source=hathizip -m pytest --junitxml=./reports/tests/pytest/pytest-junit.xml'
+                                                )
+                                            }
+                                            post {
+                                                always{
+                                                    stash includes: 'reports/tests/pytest/*.xml', name: 'PYTEST_UNIT_TEST_RESULTS'
+                                                    junit 'reports/tests/pytest/pytest-junit.xml'
+                                                }
+                                            }
                                         }
-                                    }
-                                    steps{
-                                        sh "python -m sphinx -b doctest docs/source build/docs -d build/docs/doctrees -v"
-                                    }
-                                    post{
-                                        cleanup{
-                                            cleanWs(
-                                                deleteDirs: true,
-                                                patterns: [
-                                                    [pattern: 'build/', type: 'INCLUDE'],
-                                                    [pattern: 'dist/', type: 'INCLUDE'],
-                                                    [pattern: 'logs/', type: 'INCLUDE'],
-                                                    [pattern: 'HathiZip.egg-info/', type: 'INCLUDE'],
-                                                ]
-                                            )
+                                        stage("Run Pylint Static Analysis") {
+                                            steps{
+                                                catchError(buildResult: 'SUCCESS', message: 'Pylint found issues', stageResult: 'UNSTABLE') {
+                                                    sh(label: "Running pylint",
+                                                        script: '''pylint hathizip -r n --msg-template="{path}:{line}: [{msg_id}({symbol}), {obj}] {msg}" > reports/pylint.txt
+                                                                   '''
+
+                                                    )
+                                                }
+                                                sh(
+                                                    script: 'pylint hathizip -r n --msg-template="{path}:{module}:{line}: [{msg_id}({symbol}), {obj}] {msg}" > reports/pylint_issues.txt',
+                                                    label: "Running pylint for sonarqube",
+                                                    returnStatus: true
+                                                )
+                                            }
+                                            post{
+                                                always{
+                                                    recordIssues(tools: [pyLint(pattern: 'reports/pylint.txt')])
+                                                    stash includes: "reports/pylint_issues.txt,reports/pylint.txt", name: 'PYLINT_REPORT'
+                                                }
+                                            }
+                                        }
+                                        stage("Doctest"){
+                                            steps{
+                                                unstash "DOCS_ARCHIVE"
+                                                sh '''coverage run --parallel-mode --source=hathizip -m sphinx -b doctest docs/source build/docs -d build/docs/doctrees -v
+                                                      '''
+                                            }
+                                            post{
+                                                cleanup{
+                                                    cleanWs(
+                                                        deleteDirs: true,
+                                                        patterns: [
+                                                            [pattern: 'build/', type: 'INCLUDE'],
+                                                            [pattern: 'dist/', type: 'INCLUDE'],
+                                                            [pattern: 'logs/', type: 'INCLUDE'],
+                                                            [pattern: 'HathiZip.egg-info/', type: 'INCLUDE'],
+                                                        ]
+                                                    )
+                                                }
+                                            }
+                                        }
+                                        stage("MyPy"){
+                                            steps{
+                                                sh "mkdir -p reports/mypy && mkdir -p logs"
+                                                catchError(buildResult: 'SUCCESS', message: 'mypy found some warnings', stageResult: 'UNSTABLE') {
+                                                    sh(
+                                                        script: "mypy -p hathizip --html-report ${WORKSPACE}/reports/mypy/mypy_html | tee logs/mypy.log"
+                                                    )
+                                                }
+                                            }
+                                            post{
+                                                always {
+                                                    publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, keepAll: false, reportDir: 'reports/mypy/mypy_html', reportFiles: 'index.html', reportName: 'MyPy', reportTitles: ''])
+                                                    recordIssues(tools: [myPy(name: 'MyPy', pattern: 'logs/mypy.log')])
+                                                }
+
+                                            }
+                                        }
+                                        stage("Run Flake8 Static Analysis") {
+                                            steps{
+                                                catchError(buildResult: 'SUCCESS', message: 'flake8 found some warnings', stageResult: 'UNSTABLE') {
+                                                    sh(label: "Running flake8",
+                                                       script: """flake8 hathizip --tee --output-file=logs/flake8.log
+                                                                  """
+                                                    )
+                                                }
+                                            }
+                                            post {
+                                                always {
+                                                    stash includes: 'logs/flake8.log', name: 'FLAKE8_REPORT'
+                                                    recordIssues(tools: [flake8(name: 'Flake8', pattern: 'logs/flake8.log')])
+                                                }
+                                                cleanup{
+                                                    cleanWs(
+                                                        deleteDirs: true,
+                                                        patterns: [
+                                                            [pattern: 'build/', type: 'INCLUDE'],
+                                                            [pattern: 'dist/', type: 'INCLUDE'],
+                                                            [pattern: 'logs/', type: 'INCLUDE'],
+                                                            [pattern: 'HathiZip.egg-info/', type: 'INCLUDE'],
+                                                        ]
+                                                    )
+                                                }
+                                            }
                                         }
                                     }
 
                                 }
-                                stage("MyPy"){
-                                    agent {
-                                      dockerfile {
-                                        filename 'ci/docker/python-testing/Dockerfile'
-                                        label "linux && docker"
-                                      }
-                                    }
-                                    steps{
-                                        sh "mkdir -p reports/mypy && mkdir -p logs"
-                                        catchError(buildResult: 'SUCCESS', message: 'mypy found some warnings', stageResult: 'UNSTABLE') {
-                                            sh(
-                                                script: "mypy -p hathizip --html-report ${WORKSPACE}/reports/mypy/mypy_html | tee logs/mypy.log"
+                            }
+                            post{
+                                always{
+                                    sh(label: 'combining coverage data',
+                                       script: '''coverage combine
+                                                  coverage xml -o ./reports/coverage.xml
+                                                  '''
+                                    )
+                                    stash(includes: 'reports/coverage*.xml', name: 'COVERAGE_REPORT_DATA')
+                                    publishCoverage(
+                                                adapters: [
+                                                        coberturaAdapter('reports/coverage.xml')
+                                                    ],
+                                                sourceFileResolver: sourceFiles('STORE_ALL_BUILD')
                                             )
-                                        }
-                                    }
-                                    post{
-                                        always {
-                                            publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, keepAll: false, reportDir: 'reports/mypy/mypy_html', reportFiles: 'index.html', reportName: 'MyPy', reportTitles: ''])
-                                            recordIssues(tools: [myPy(name: 'MyPy', pattern: 'logs/mypy.log')])
-                                        }
-
-                                    }
-                                }
-                                stage("Run Flake8 Static Analysis") {
-                                    agent {
-                                        dockerfile {
-                                            filename 'ci/docker/python/linux/testing/Dockerfile'
-                                            label 'linux && docker'
-                                            additionalBuildArgs '--build-arg USER_ID=$(id -u) --build-arg GROUP_ID=$(id -g)'
-                                        }
-                                    }
-                                    steps{
-                                        catchError(buildResult: 'SUCCESS', message: 'flake8 found some warnings', stageResult: 'UNSTABLE') {
-                                            sh(label: "Running flake8",
-                                               script: """mkdir -p logs
-                                                          flake8 hathizip --tee --output-file=logs/flake8.log
-                                                          """
-                                            )
-                                        }
-                                    }
-                                    post {
-                                        always {
-                                            stash includes: 'logs/flake8.log', name: 'FLAKE8_REPORT'
-                                            recordIssues(tools: [flake8(name: 'Flake8', pattern: 'logs/flake8.log')])
-                                        }
-                                        cleanup{
-                                            cleanWs(
-                                                deleteDirs: true,
-                                                patterns: [
-                                                    [pattern: 'build/', type: 'INCLUDE'],
-                                                    [pattern: 'dist/', type: 'INCLUDE'],
-                                                    [pattern: 'logs/', type: 'INCLUDE'],
-                                                    [pattern: 'HathiZip.egg-info/', type: 'INCLUDE'],
-                                                ]
-                                            )
-                                        }
-                                    }
                                 }
                             }
                         }
                         stage('Run Sonarqube Analysis'){
-                            agent none
                             options{
                                 lock('speedwagon-sonarscanner')
                             }
@@ -292,9 +310,9 @@ pipeline {
                                         sonarqube = load('ci/jenkins/scripts/sonarqube.groovy')
                                     }
                                     def stashes = [
-        //                                 'COVERAGE_REPORT_DATA',
+                                        'COVERAGE_REPORT_DATA',
                                         'PYTEST_UNIT_TEST_RESULTS',
-        //                                 'PYLINT_REPORT',
+                                        'PYLINT_REPORT',
                                         'FLAKE8_REPORT'
                                     ]
                                     def sonarqubeConfig = [
