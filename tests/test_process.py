@@ -1,6 +1,8 @@
 import os
 
 import itertools
+import zipfile
+from unittest.mock import Mock
 
 from hathizip import process
 import pytest
@@ -162,3 +164,39 @@ def test_get_files(monkeypatch):
             file_path, expected_files[i][0])
         assert os.path.normpath(archive_name) == os.path.normpath(expected_files[i][1]), "got {}, expected {}".format(
             file_path, expected_files[i][1])
+
+
+def test_compress_folder_writes(tmpdir, monkeypatch):
+    src = tmpdir / "src"
+    src.ensure_dir()
+
+    dist = tmpdir / "dst"
+    dist.ensure_dir()
+
+    def mock_get_files(*args):
+        yield process.PackageFile("dummy", "/dummy")
+
+    with monkeypatch.context() as e:
+        mock_writer = Mock()
+        e.setattr(zipfile.ZipFile, "write", mock_writer)
+        e.setattr(process, "get_files", mock_get_files)
+        process.compress_folder(src.strpath, dst=dist.strpath)
+        mock_writer.assert_called()
+
+
+def test_compress_folder_inplsvr_writes(tmpdir, monkeypatch):
+    src = tmpdir / "src"
+    src.ensure_dir()
+
+    dist = tmpdir / "dst"
+    dist.ensure_dir()
+
+    def mock_get_files(*args):
+        yield process.PackageFile("dummy", "/dummy")
+
+    with monkeypatch.context() as e:
+        mock_writer = Mock()
+        e.setattr(zipfile.ZipFile, "write", mock_writer)
+        e.setattr(process, "get_files", mock_get_files)
+        process.compress_folder_inplace(src.strpath, dst=dist.strpath)
+        mock_writer.assert_called()
