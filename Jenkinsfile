@@ -168,6 +168,7 @@ pipeline {
                                         sh '''mkdir -p logs
                                               python setup.py build
                                               mkdir -p reports
+                                              mkdir -p build/docs
                                               '''
                                     }
                                 }
