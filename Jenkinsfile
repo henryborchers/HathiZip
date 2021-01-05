@@ -50,8 +50,8 @@ def get_props(){
             def metadataFile = findFiles( glob: '*.dist-info/METADATA')[0]
             def metadata = readProperties(interpolate: true, file: metadataFile.path )
             echo """Version = ${metadata.Version}
-            Name = ${metadata.Name}
-            """
+Name = ${metadata.Name}
+"""
             return metadata
         }
     }
