@@ -22,7 +22,7 @@ def get_files(path) -> typing.Iterator[PackageFile]:
     starting_point = \
         os.path.sep.join(os.path.normcase(path).split(os.path.sep)[:-1])
 
-    for root, dirs, files in os.walk(path):
+    for root, _, files in os.walk(path):
         for _file in files:
             relative_root = os.path.relpath(root, starting_point)
             yield PackageFile(
@@ -46,8 +46,8 @@ def compress_folder(path, dst):
     last_path = os.path.normcase(path).split(os.path.sep)[-1]
     zipname = "{}.zip".format(last_path)
 
-    with tempfile.TemporaryDirectory() as tf:
-        tmp_zip = os.path.join(tf, zipname)
+    with tempfile.TemporaryDirectory() as temp_dir:
+        tmp_zip = os.path.join(temp_dir, zipname)
         logger.debug("Creating temp zip file {}".format(tmp_zip))
         with zipfile.ZipFile(tmp_zip, "w") as zipped_package:
 
