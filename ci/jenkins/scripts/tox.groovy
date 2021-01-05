@@ -11,7 +11,7 @@ def getToxEnvs(){
                 label: "Getting Tox Environments",
                 returnStdout: true,
                 script: "@tox -l"
-            ).trim().split('\n')
+            ).trim().split('\r\n')
     }
     envs.collect{
         it.trim()
@@ -79,6 +79,9 @@ def getErrorToxMetadataReport(tox_env, toxResultFile){
     def tox_result = readJSON(file: toxResultFile)
     def testEnv = tox_result['testenvs'][tox_env]
     def errorMessages = []
+    if (testEnv == null){
+        return tox_result['testenvs']
+    }
     testEnv["test"].each{
         if (it['retcode'] != 0){
             echo "Found error ${it}"
@@ -176,12 +179,12 @@ def getToxTestsParallel(args = [:]){
                                 if(isUnix()){
                                     sh(
                                         label: "Running Tox with ${tox_env} environment",
-                                        script: "tox  -vv --parallel--safe-build --result-json=${TOX_RESULT_FILE_NAME} -e $tox_env"
+                                        script: "tox  -v --parallel--safe-build --result-json=${TOX_RESULT_FILE_NAME} -e $tox_env"
                                     )
                                 } else {
                                     bat(
                                         label: "Running Tox with ${tox_env} environment",
-                                        script: "tox  -vv --parallel--safe-build --result-json=${TOX_RESULT_FILE_NAME} -e $tox_env "
+                                        script: "tox  -v --parallel--safe-build --result-json=${TOX_RESULT_FILE_NAME} -e $tox_env "
                                     )
                                 }
                             } catch (e){

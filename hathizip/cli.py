@@ -2,9 +2,13 @@ import argparse
 import os
 import shutil
 
-import hathizip
 from hathizip import process, configure_logging
 from hathizip.utils import has_subdirs
+
+try:
+    from importlib import metadata
+except ImportError:
+    import importlib_metadata as metadata  # type: ignore
 
 
 def destination_path(path):
@@ -21,10 +25,14 @@ def get_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Creates .zip file packages for HathiTrust.")
 
+    try:
+        version = metadata.version(__package__)
+    except metadata.PackageNotFoundError:
+        version = "dev"
     parser.add_argument(
         '--version',
         action='version',
-        version=hathizip.__version__
+        version=version
     )
 
     parser.add_argument(
