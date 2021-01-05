@@ -71,7 +71,7 @@ def compress_folder_inplace(path, dst):
     last_path = os.path.normcase(path).split(os.path.sep)[-1]
     zipname = "{}.zip".format(last_path)
 
-    temp_zipname = os.path.join(dst, "processing.dat".format(last_path))
+    temp_zipname = os.path.join(dst, "processing.dat")
 
     # with tempfile.TemporaryDirectory() as tf:
     # logger.debug("Creating temp zip file {}".format(tmp_zip))
