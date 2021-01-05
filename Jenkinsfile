@@ -216,6 +216,9 @@ pipeline {
                                                       '''
                                             }
                                             post{
+                                                failure{
+                                                    sh "ls -R build/docs/doctrees"
+                                                }
                                                 cleanup{
                                                     cleanWs(
                                                         deleteDirs: true,
