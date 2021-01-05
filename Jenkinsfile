@@ -159,7 +159,7 @@ pipeline {
                                 dockerfile {
                                     filename 'ci/docker/python/linux/testing/Dockerfile'
                                     label 'linux && docker'
-                                    additionalBuildArgs '--build-arg USER_ID=$(id -u) --build-arg GROUP_ID=$(id -g)'
+                                    additionalBuildArgs '--build-arg USER_ID=$(id -u) --build-arg GROUP_ID=$(id -g) --build-arg PIP_EXTRA_INDEX_URL --build-arg PIP_TRUSTED_HOST'
                                 }
                             }
                             stages{
@@ -168,7 +168,6 @@ pipeline {
                                         sh '''mkdir -p logs
                                               python setup.py build
                                               mkdir -p reports
-                                              mkdir -p build/docs
                                               '''
                                     }
                                 }
@@ -212,14 +211,10 @@ pipeline {
                                         stage("Doctest"){
                                             steps{
                                                 unstash "DOCS_ARCHIVE"
-                                                sh '''python -m sphinx -b html docs/source build/docs -d build/docs/doctrees
-                                                      coverage run --parallel-mode --source=hathizip -m sphinx -b doctest docs/source build/docs -d build/docs/doctrees -v
+                                                sh '''coverage run --parallel-mode --source=hathizip -m sphinx -b doctest docs/source build/docs -d build/docs/doctrees -v
                                                       '''
                                             }
                                             post{
-                                                failure{
-                                                    sh "ls -R build/docs/doctrees"
-                                                }
                                                 cleanup{
                                                     cleanWs(
                                                         deleteDirs: true,
