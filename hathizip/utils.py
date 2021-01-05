@@ -1,7 +1,7 @@
 import os
 
 
-def has_subdirs(path: str)->bool:
+def has_subdirs(path: str) -> bool:
     """
     Validate path. Make sure it has folders in it
 

@@ -50,8 +50,8 @@ def get_props(){
             def metadataFile = findFiles( glob: '*.dist-info/METADATA')[0]
             def metadata = readProperties(interpolate: true, file: metadataFile.path )
             echo """Version = ${metadata.Version}
-            Name = ${metadata.Name}
-            """
+Name = ${metadata.Name}
+"""
             return metadata
         }
     }
@@ -159,7 +159,7 @@ pipeline {
                                 dockerfile {
                                     filename 'ci/docker/python/linux/testing/Dockerfile'
                                     label 'linux && docker'
-                                    additionalBuildArgs '--build-arg USER_ID=$(id -u) --build-arg GROUP_ID=$(id -g)'
+                                    additionalBuildArgs '--build-arg USER_ID=$(id -u) --build-arg GROUP_ID=$(id -g) --build-arg PIP_EXTRA_INDEX_URL --build-arg PIP_TRUSTED_HOST'
                                 }
                             }
                             stages{
@@ -211,10 +211,12 @@ pipeline {
                                         stage("Doctest"){
                                             steps{
                                                 unstash "DOCS_ARCHIVE"
-                                                sh '''coverage run --parallel-mode --source=hathizip -m sphinx -b doctest docs/source build/docs -d build/docs/doctrees -v
-                                                      '''
+                                                sh 'coverage run --parallel-mode --source=hathizip -m sphinx -b doctest docs/source build/docs -d build/docs/doctrees -v'
                                             }
                                             post{
+                                                failure{
+                                                    sh "ls -R build/docs/"
+                                                }
                                                 cleanup{
                                                     cleanWs(
                                                         deleteDirs: true,

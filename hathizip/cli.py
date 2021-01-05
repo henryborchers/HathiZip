@@ -2,9 +2,13 @@ import argparse
 import os
 import shutil
 
-import hathizip
 from hathizip import process, configure_logging
 from hathizip.utils import has_subdirs
+
+try:
+    from importlib import metadata
+except ImportError:
+    import importlib_metadata as metadata  # type: ignore
 
 
 def destination_path(path):
@@ -18,12 +22,17 @@ def destination_path(path):
 
 
 def get_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Creates .zip file packages for HathiTrust.")
+    parser = argparse.ArgumentParser(
+        description="Creates .zip file packages for HathiTrust.")
 
+    try:
+        version = metadata.version(__package__)
+    except metadata.PackageNotFoundError:
+        version = "dev"
     parser.add_argument(
         '--version',
         action='version',
-        version=hathizip.__version__
+        version=version
     )
 
     parser.add_argument(
@@ -33,7 +42,8 @@ def get_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--dest",
         type=destination_path,
-        help="Alternative path to save the newly created HathiTrust zipped package for submission"
+        help="Alternative path to save the newly created HathiTrust zipped "
+             "package for submission"
     )
     parser.add_argument(
         "--remove",
@@ -47,7 +57,12 @@ def get_parser() -> argparse.ArgumentParser:
         '--debug',
         action="store_true",
         help="Run script in debug mode")
-    debug_group.add_argument("--log-debug", dest="log_debug", help="Save debug information to a file")
+
+    debug_group.add_argument(
+        "--log-debug",
+        dest="log_debug",
+        help="Save debug information to a file"
+    )
 
     return parser
 
@@ -57,13 +72,18 @@ def main():
     args = parser.parse_args()
 
     if args.dest:
-        # If an alternative destination path for the zip files is asked for, use that.
+        # If an alternative destination path for the zip files is asked for,
+        # use that.
         destination_path = args.dest
     else:
         # Otherwise just put the newly created zip files in the same path
         destination_path = args.path
 
-    logger = configure_logging.configure_logger(debug_mode=args.debug, log_file=args.log_debug)
+    logger = configure_logging.configure_logger(
+        debug_mode=args.debug,
+        log_file=args.log_debug
+    )
+
     if not has_subdirs(args.path):
         logger.error("No directories found at {}".format(args.path))
     for folder in filter(lambda x: x.is_dir(), os.scandir(args.path)):

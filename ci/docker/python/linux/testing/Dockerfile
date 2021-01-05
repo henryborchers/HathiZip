@@ -7,9 +7,8 @@ FROM python:${PYTHON_VERSION} as wheel_builder
 ADD requirements.txt requirements-dev.txt ci/docker/shared/requirements-ci.txt /tmp/
 RUN python -m pip install --upgrade pip &&  \
     pip install setuptools && \
-    pip install wheel
-
-RUN pip wheel --wheel-dir=/wheels -r /tmp/requirements.txt -v && \
+    pip install wheel && \
+    pip wheel --wheel-dir=/wheels -r /tmp/requirements.txt -v && \
     pip wheel --wheel-dir=/wheels -r /tmp/requirements-dev.txt && \
     pip wheel --wheel-dir=/wheels -r /tmp/requirements-ci.txt
 

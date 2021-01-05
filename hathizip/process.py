@@ -10,7 +10,7 @@ PackageFile = namedtuple("PackageFile", ("absolute_path", "archive_path"))
 
 
 # TODO: create get_files testing
-def get_files(path)->typing.Iterator[PackageFile]:
+def get_files(path) -> typing.Iterator[PackageFile]:
     """Find files relative to a given path
 
     Args:
@@ -19,8 +19,10 @@ def get_files(path)->typing.Iterator[PackageFile]:
     Yields: PackageFile containing the absolute path, and the archive path
 
     """
-    starting_point = os.path.sep.join(os.path.normcase(path).split(os.path.sep)[:-1])
-    for root, dirs, files in os.walk(path):
+    starting_point = \
+        os.path.sep.join(os.path.normcase(path).split(os.path.sep)[:-1])
+
+    for root, _, files in os.walk(path):
         for _file in files:
             relative_root = os.path.relpath(root, starting_point)
             yield PackageFile(
@@ -44,13 +46,17 @@ def compress_folder(path, dst):
     last_path = os.path.normcase(path).split(os.path.sep)[-1]
     zipname = "{}.zip".format(last_path)
 
-    with tempfile.TemporaryDirectory() as tf:
-        tmp_zip = os.path.join(tf, zipname)
+    with tempfile.TemporaryDirectory() as temp_dir:
+        tmp_zip = os.path.join(temp_dir, zipname)
         logger.debug("Creating temp zip file {}".format(tmp_zip))
         with zipfile.ZipFile(tmp_zip, "w") as zipped_package:
 
             for file, archive_name in get_files(path):
-                logger.debug("Writing {} as {} to {}".format(file, archive_name, tmp_zip))
+                logger.debug(
+                    "Writing {} as {} to {}".format(
+                        file, archive_name, tmp_zip
+                    )
+                )
                 zipped_package.write(file, arcname=archive_name)
                 logger.info("Zipped {}".format(file))
         final_zip = os.path.join(dst, zipname)
@@ -65,7 +71,7 @@ def compress_folder_inplace(path, dst):
     last_path = os.path.normcase(path).split(os.path.sep)[-1]
     zipname = "{}.zip".format(last_path)
 
-    temp_zipname = os.path.join(dst, "processing.dat".format(last_path))
+    temp_zipname = os.path.join(dst, "processing.dat")
 
     # with tempfile.TemporaryDirectory() as tf:
     # logger.debug("Creating temp zip file {}".format(tmp_zip))
@@ -84,5 +90,3 @@ def compress_folder_inplace(path, dst):
 
     shutil.move(temp_zipname, final_zip)
     logger.info("Generated {}".format(final_zip))
-
-
