@@ -184,7 +184,7 @@ def test_compress_folder_writes(tmpdir, monkeypatch):
         mock_writer.assert_called()
 
 
-def test_compress_folder_inplsvr_writes(tmpdir, monkeypatch):
+def test_compress_folder_inplace_writes(tmpdir, monkeypatch):
     src = tmpdir / "src"
     src.ensure_dir()
 
