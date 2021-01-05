@@ -212,7 +212,8 @@ pipeline {
                                         stage("Doctest"){
                                             steps{
                                                 unstash "DOCS_ARCHIVE"
-                                                sh '''coverage run --parallel-mode --source=hathizip -m sphinx -b doctest docs/source build/docs -d build/docs/doctrees -vv
+                                                sh '''python -m sphinx -b html docs/source build/docs -d build/docs/doctrees
+                                                      coverage run --parallel-mode --source=hathizip -m sphinx -b doctest docs/source build/docs -d build/docs/doctrees -v
                                                       '''
                                             }
                                             post{
