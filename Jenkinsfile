@@ -214,6 +214,9 @@ pipeline {
                                                 sh 'coverage run --parallel-mode --source=hathizip -m sphinx -b doctest docs/source build/docs -d build/docs/doctrees -v'
                                             }
                                             post{
+                                                failure{
+                                                    sh "ls -R build/docs/"
+                                                }
                                                 cleanup{
                                                     cleanWs(
                                                         deleteDirs: true,
