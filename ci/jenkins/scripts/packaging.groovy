@@ -21,6 +21,7 @@ def test_pkg(args = [:]){
             dockerImage = docker.build("dummy", "-f ${args.agent.dockerfile.filename} ${args.agent.dockerfile.additionalBuildArgs} .")
         }
         ws{
+            checkout scm
             dockerImage.inside{
                 unstash "${args.stash}"
                 findFiles(glob: args.glob).each{
