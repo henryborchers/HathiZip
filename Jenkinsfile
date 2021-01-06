@@ -12,6 +12,13 @@ CONFIGURATIONS = [
         tox_env: "py38"
         ]
 ]
+
+def DEFAULT_AGENT = [
+    filename: 'ci/docker/python/linux/testing/Dockerfile',
+    label: 'linux && docker',
+    additionalBuildArgs: '--build-arg USER_ID=$(id -u) --build-arg GROUP_ID=$(id -g) --build-arg PIP_EXTRA_INDEX_URL --build-arg PIP_TRUSTED_HOST'
+]
+
 def tox
 
 node(){
@@ -82,9 +89,9 @@ pipeline {
         stage("Build"){
             agent {
                 dockerfile {
-                    filename 'ci/docker/python/linux/testing/Dockerfile'
-                    label 'linux && docker'
-                    additionalBuildArgs '--build-arg USER_ID=$(id -u) --build-arg GROUP_ID=$(id -g) --build-arg PIP_EXTRA_INDEX_URL --build-arg PIP_TRUSTED_HOST'
+                    filename DEFAULT_AGENT.filename
+                    label DEFAULT_AGENT.label
+                    additionalBuildArgs DEFAULT_AGENT.additionalBuildArgs
                 }
             }
             stages{
@@ -157,9 +164,9 @@ pipeline {
                         stage("Run test"){
                             agent {
                                 dockerfile {
-                                    filename 'ci/docker/python/linux/testing/Dockerfile'
-                                    label 'linux && docker'
-                                    additionalBuildArgs '--build-arg USER_ID=$(id -u) --build-arg GROUP_ID=$(id -g) --build-arg PIP_EXTRA_INDEX_URL --build-arg PIP_TRUSTED_HOST'
+                                    filename DEFAULT_AGENT.filename
+                                    label DEFAULT_AGENT.label
+                                    additionalBuildArgs DEFAULT_AGENT.additionalBuildArgs
                                 }
                             }
                             stages{
@@ -411,9 +418,9 @@ pipeline {
                 stage("Source and Wheel formats"){
                     agent {
                         dockerfile {
-                            filename 'ci/docker/python/linux/testing/Dockerfile'
-                            label 'linux && docker'
-                            additionalBuildArgs '--build-arg USER_ID=$(id -u) --build-arg GROUP_ID=$(id -g)'
+                            filename DEFAULT_AGENT.filename
+                            label DEFAULT_AGENT.label
+                            additionalBuildArgs DEFAULT_AGENT.additionalBuildArgs
                         }
                     }
                     steps{
@@ -655,9 +662,9 @@ pipeline {
                 stage("Tagging git Commit"){
                     agent {
                         dockerfile {
-                            filename 'ci/docker/python/linux/testing/Dockerfile'
-                            label 'linux && docker'
-                            additionalBuildArgs '--build-arg USER_ID=$(id -u) --build-arg GROUP_ID=$(id -g)'
+                            filename DEFAULT_AGENT.filename
+                            label DEFAULT_AGENT.label
+                            additionalBuildArgs DEFAULT_AGENT.additionalBuildArgs
                         }
                     }
                     when{
