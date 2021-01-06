@@ -103,6 +103,7 @@ pipeline {
         string(name: "PROJECT_NAME", defaultValue: "HathiTrust Zip for Submit", description: "Name given to the project")
         booleanParam(name: 'USE_SONARQUBE', defaultValue: defaultParameterValues.USE_SONARQUBE, description: 'Send data test data to SonarQube')
         booleanParam(name: "TEST_RUN_TOX", defaultValue: false, description: "Run Tox Tests")
+        booleanParam(name: 'TEST_PACKAGES', defaultValue: true, description: "Test packages")
         booleanParam(name: "PACKAGE_CX_FREEZE", defaultValue: false, description: "Create a package with CX_Freeze")
         booleanParam(name: "DEPLOY_DEVPI", defaultValue: false, description: "Deploy to devpi on https://devpi.library.illinois.edu/DS_Jenkins/${env.BRANCH_NAME}")
         booleanParam(name: "DEPLOY_DEVPI_PRODUCTION", defaultValue: false, description: "Deploy to https://devpi.library.illinois.edu/production/release")
@@ -437,68 +438,316 @@ pipeline {
             }
         }
         stage("Packaging") {
-            parallel {
-                stage("Source and Wheel formats"){
-                    agent {
-                        dockerfile {
-                            filename DEFAULT_AGENT.filename
-                            label DEFAULT_AGENT.label
-                            additionalBuildArgs DEFAULT_AGENT.additionalBuildArgs
-                        }
-                    }
-                    steps{
-                        timeout(5){
-                            sh "python setup.py sdist --format zip -d dist bdist_wheel -d dist"
-                        }
+            stages{
+                stage("Create"){
+                    parallel {
+                        stage("Source and Wheel formats"){
+                            agent {
+                                dockerfile {
+                                    filename DEFAULT_AGENT.filename
+                                    label DEFAULT_AGENT.label
+                                    additionalBuildArgs DEFAULT_AGENT.additionalBuildArgs
+                                }
+                            }
+                            steps{
+                                timeout(5){
+                                    sh "python setup.py sdist -d dist bdist_wheel -d dist"
+                                }
 
-                    }
-                    post{
-                        success{
-                            archiveArtifacts artifacts: "dist/*.whl,dist/*.tar.gz,dist/*.zip", fingerprint: true
-                            stash includes: 'dist/*.whl,dist/*.tar.gz,dist/*.zip', name: "dist"
+                            }
+                            post{
+                                success{
+                                    archiveArtifacts artifacts: "dist/*.whl,dist/*.tar.gz,dist/*.zip", fingerprint: true
+                                    stash includes: 'dist/*.whl,dist/*.tar.gz,dist/*.zip', name: "dist"
+                                }
+                                cleanup{
+                                    cleanWs(
+                                        deleteDirs: true,
+                                        patterns: [
+                                            [pattern: 'build/', type: 'INCLUDE'],
+                                            [pattern: 'dist/', type: 'INCLUDE'],
+                                            [pattern: 'logs/', type: 'INCLUDE'],
+                                            [pattern: 'HathiZip.egg-info/', type: 'INCLUDE'],
+                                        ]
+                                    )
+                                }
+                            }
                         }
-                        cleanup{
-                            cleanWs(
-                                deleteDirs: true,
-                                patterns: [
-                                    [pattern: 'build/', type: 'INCLUDE'],
-                                    [pattern: 'dist/', type: 'INCLUDE'],
-                                    [pattern: 'logs/', type: 'INCLUDE'],
-                                    [pattern: 'HathiZip.egg-info/', type: 'INCLUDE'],
-                                ]
-                            )
+                        stage("Windows CX_Freeze MSI"){
+                            agent {
+                                dockerfile {
+                                    filename 'ci/docker/python/windows/build/msvc/Dockerfile'
+                                    label 'windows && docker'
+                                }
+                            }
+                            when{
+                                equals expected: true, actual: params.PACKAGE_CX_FREEZE
+                                beforeAgent true
+                            }
+                            steps{
+                                timeout(15){
+                                    bat "python cx_setup.py bdist_msi --add-to-path=true -k --bdist-dir build/msi -d dist"
+                                }
+                            }
+                            post{
+                                success{
+                                    stash includes: "dist/*.msi", name: "msi"
+                                    archiveArtifacts artifacts: "dist/*.msi", fingerprint: true
+                                    }
+                                cleanup{
+                                    cleanWs(
+                                        deleteDirs: true,
+                                        patterns: [
+                                            [pattern: 'build/', type: 'INCLUDE'],
+                                            [pattern: 'dist/', type: 'INCLUDE'],
+                                            [pattern: 'logs/', type: 'INCLUDE'],
+                                            [pattern: 'HathiZip.egg-info/', type: 'INCLUDE'],
+                                        ]
+                                    )
+                                }
+                            }
                         }
                     }
                 }
-                stage("Windows CX_Freeze MSI"){
-                    agent {
-                        dockerfile {
-                            filename 'ci/docker/python/windows/build/msvc/Dockerfile'
-                            label "windows && docker"
-                        }
-                    }
+                stage("Testing"){
                     when{
-                        equals expected: true, actual: params.PACKAGE_CX_FREEZE
+                        equals expected: true, actual: params.TEST_PACKAGES
                         beforeAgent true
                     }
                     steps{
-                        timeout(15){
-                            bat "python cx_setup.py bdist_msi --add-to-path=true -k --bdist-dir build/msi -d dist"
-                        }
-                    }
-                    post{
-                        success{
-                            stash includes: "dist/*.msi", name: "msi"
-                            archiveArtifacts artifacts: "dist/*.msi", fingerprint: true
+                        script{
+                            def packages
+                            node(){
+                                checkout scm
+                                packages = load "ci/jenkins/scripts/packaging.groovy"
+
                             }
-                        cleanup{
-                            cleanWs(
-                                deleteDirs: true,
-                                patterns: [
-                                    [pattern: 'build/', type: 'INCLUDE'],
-                                    [pattern: 'dist/', type: 'INCLUDE'],
-                                    [pattern: 'logs/', type: 'INCLUDE'],
-                                    [pattern: 'HathiZip.egg-info/', type: 'INCLUDE'],
+                            parallel(
+                                [
+                                    'Windows - Python 3.6: sdist': {
+                                        packages.test_pkg(
+                                            agent: [
+                                                dockerfile: [
+                                                    label: 'windows && docker',
+                                                    filename: 'ci/docker/python/windows/tox/Dockerfile',
+                                                    additionalBuildArgs: '--build-arg PIP_EXTRA_INDEX_URL --build-arg PIP_INDEX_URL --build-arg CHOCOLATEY_SOURCE'
+                                                ]
+                                            ],
+                                            glob: 'dist/*.tar.gz,dist/*.zip',
+                                            stash: 'dist',
+                                            pythonVersion: '3.6'
+                                        )
+                                    },
+                                    'Windows - Python 3.7: sdist': {
+                                        packages.test_pkg(
+                                            agent: [
+                                                dockerfile: [
+                                                    label: 'windows && docker',
+                                                    filename: 'ci/docker/python/windows/tox/Dockerfile',
+                                                    additionalBuildArgs: '--build-arg PIP_EXTRA_INDEX_URL --build-arg PIP_INDEX_URL --build-arg CHOCOLATEY_SOURCE'
+                                                ]
+                                            ],
+                                            glob: 'dist/*.tar.gz,dist/*.zip',
+                                            stash: 'dist',
+                                            pythonVersion: '3.7'
+                                        )
+                                    },
+                                    'Windows - Python 3.8: sdist': {
+                                        packages.test_pkg(
+                                            agent: [
+                                                dockerfile: [
+                                                    label: 'windows && docker',
+                                                    filename: 'ci/docker/python/windows/tox/Dockerfile',
+                                                    additionalBuildArgs: '--build-arg PIP_EXTRA_INDEX_URL --build-arg PIP_INDEX_URL --build-arg CHOCOLATEY_SOURCE'
+                                                ]
+                                            ],
+                                            glob: 'dist/*.tar.gz,dist/*.zip',
+                                            stash: 'dist',
+                                            pythonVersion: '3.8'
+                                        )
+                                    },
+                                    'Windows - Python 3.9: sdist': {
+                                        packages.test_pkg(
+                                            agent: [
+                                                dockerfile: [
+                                                    label: 'windows && docker',
+                                                    filename: 'ci/docker/python/windows/tox/Dockerfile',
+                                                    additionalBuildArgs: '--build-arg PIP_EXTRA_INDEX_URL --build-arg PIP_INDEX_URL --build-arg CHOCOLATEY_SOURCE'
+                                                ]
+                                            ],
+                                            glob: 'dist/*.tar.gz,dist/*.zip',
+                                            stash: 'dist',
+                                            pythonVersion: '3.9'
+                                        )
+                                    },
+                                    'Linux - Python 3.6: sdist': {
+                                        packages.test_pkg(
+                                            agent: [
+                                                dockerfile: [
+                                                    label: 'linux && docker',
+                                                    filename: 'ci/docker/python/linux/tox/Dockerfile',
+                                                    additionalBuildArgs: '--build-arg PIP_EXTRA_INDEX_URL --build-arg PIP_INDEX_URL'
+                                                ]
+                                            ],
+                                            glob: 'dist/*.tar.gz',
+                                            stash: 'dist',
+                                            pythonVersion: '3.6'
+                                        )
+                                    },
+                                    'Linux - Python 3.7: sdist': {
+                                        packages.test_pkg(
+                                            agent: [
+                                                dockerfile: [
+                                                    label: 'linux && docker',
+                                                    filename: 'ci/docker/python/linux/tox/Dockerfile',
+                                                    additionalBuildArgs: '--build-arg PIP_EXTRA_INDEX_URL --build-arg PIP_INDEX_URL'
+                                                ]
+                                            ],
+                                            glob: 'dist/*.tar.gz',
+                                            stash: 'dist',
+                                            pythonVersion: '3.7'
+                                        )
+                                    },
+                                    'Linux - Python 3.8: sdist': {
+                                        packages.test_pkg(
+                                            agent: [
+                                                dockerfile: [
+                                                    label: 'linux && docker',
+                                                    filename: 'ci/docker/python/linux/tox/Dockerfile',
+                                                    additionalBuildArgs: '--build-arg PIP_EXTRA_INDEX_URL --build-arg PIP_INDEX_URL'
+                                                ]
+                                            ],
+                                            glob: 'dist/*.tar.gz',
+                                            stash: 'dist',
+                                            pythonVersion: '3.8'
+                                        )
+                                    },
+                                    'Linux - Python 3.9: sdist': {
+                                        packages.test_pkg(
+                                            agent: [
+                                                dockerfile: [
+                                                    label: 'linux && docker',
+                                                    filename: 'ci/docker/python/linux/tox/Dockerfile',
+                                                    additionalBuildArgs: '--build-arg PIP_EXTRA_INDEX_URL --build-arg PIP_INDEX_URL'
+                                                ]
+                                            ],
+                                            glob: 'dist/*.tar.gz',
+                                            stash: 'dist',
+                                            pythonVersion: '3.9'
+                                        )
+                                    },
+                                    'Windows - Python 3.6: wheel': {
+                                        packages.test_pkg(
+                                            agent: [
+                                                dockerfile: [
+                                                    label: 'windows && docker',
+                                                    filename: 'ci/docker/python/windows/tox/Dockerfile',
+                                                    additionalBuildArgs: '--build-arg PIP_EXTRA_INDEX_URL --build-arg PIP_INDEX_URL --build-arg CHOCOLATEY_SOURCE'
+                                                ]
+                                            ],
+                                            glob: 'dist/*.whl',
+                                            stash: 'dist',
+                                            pythonVersion: '3.6'
+                                        )
+                                    },
+                                    'Windows - Python 3.7: wheel': {
+                                        packages.test_pkg(
+                                            agent: [
+                                                dockerfile: [
+                                                    label: 'windows && docker',
+                                                    filename: 'ci/docker/python/windows/tox/Dockerfile',
+                                                    additionalBuildArgs: '--build-arg PIP_EXTRA_INDEX_URL --build-arg PIP_INDEX_URL --build-arg CHOCOLATEY_SOURCE'
+                                                ]
+                                            ],
+                                            glob: 'dist/*.whl',
+                                            stash: 'dist',
+                                            pythonVersion: '3.7'
+                                        )
+                                    },
+                                    'Windows - Python 3.8: wheel': {
+                                        packages.test_pkg(
+                                            agent: [
+                                                dockerfile: [
+                                                    label: 'windows && docker',
+                                                    filename: 'ci/docker/python/windows/tox/Dockerfile',
+                                                    additionalBuildArgs: '--build-arg PIP_EXTRA_INDEX_URL --build-arg PIP_INDEX_URL --build-arg CHOCOLATEY_SOURCE'
+                                                ]
+                                            ],
+                                            glob: 'dist/*.whl',
+                                            stash: 'dist',
+                                            pythonVersion: '3.8'
+                                        )
+                                    },
+                                    'Windows - Python 3.9: wheel': {
+                                        packages.test_pkg(
+                                            agent: [
+                                                dockerfile: [
+                                                    label: 'windows && docker',
+                                                    filename: 'ci/docker/python/windows/tox/Dockerfile',
+                                                    additionalBuildArgs: '--build-arg PIP_EXTRA_INDEX_URL --build-arg PIP_INDEX_URL --build-arg CHOCOLATEY_SOURCE'
+                                                ]
+                                            ],
+                                            glob: 'dist/*.whl',
+                                            stash: 'dist',
+                                            pythonVersion: '3.9'
+                                        )
+                                    },
+                                    'Linux - Python 3.6: wheel': {
+                                        packages.test_pkg(
+                                            agent: [
+                                                dockerfile: [
+                                                    label: 'linux && docker',
+                                                    filename: 'ci/docker/python/linux/tox/Dockerfile',
+                                                    additionalBuildArgs: '--build-arg PIP_EXTRA_INDEX_URL --build-arg PIP_INDEX_URL'
+                                                ]
+                                            ],
+                                            glob: 'dist/*.whl',
+                                            stash: 'dist',
+                                            pythonVersion: '3.6'
+                                        )
+                                    },
+                                    'Linux - Python 3.7: wheel': {
+                                        packages.test_pkg(
+                                            agent: [
+                                                dockerfile: [
+                                                    label: 'linux && docker',
+                                                    filename: 'ci/docker/python/linux/tox/Dockerfile',
+                                                    additionalBuildArgs: '--build-arg PIP_EXTRA_INDEX_URL --build-arg PIP_INDEX_URL'
+                                                ]
+                                            ],
+                                            glob: 'dist/*.whl',
+                                            stash: 'dist',
+                                            pythonVersion: '3.7'
+                                        )
+                                    },
+                                    'Linux - Python 3.8: wheel': {
+                                        packages.test_pkg(
+                                            agent: [
+                                                dockerfile: [
+                                                    label: 'linux && docker',
+                                                    filename: 'ci/docker/python/linux/tox/Dockerfile',
+                                                    additionalBuildArgs: '--build-arg PIP_EXTRA_INDEX_URL --build-arg PIP_INDEX_URL'
+                                                ]
+                                            ],
+                                            glob: 'dist/*.whl',
+                                            stash: 'dist',
+                                            pythonVersion: '3.8'
+                                        )
+                                    },
+                                    'Linux - Python 3.9: wheel': {
+                                        packages.test_pkg(
+                                            agent: [
+                                                dockerfile: [
+                                                    label: 'linux && docker',
+                                                    filename: 'ci/docker/python/linux/tox/Dockerfile',
+                                                    additionalBuildArgs: '--build-arg PIP_EXTRA_INDEX_URL --build-arg PIP_INDEX_URL'
+                                                ]
+                                            ],
+                                            glob: 'dist/*.whl',
+                                            stash: 'dist',
+                                            pythonVersion: '3.9'
+                                        )
+                                    },
                                 ]
                             )
                         }
