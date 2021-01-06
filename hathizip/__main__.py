@@ -1,4 +1,4 @@
-"""Bootstrap the hathizip cli"""
+"""Bootstrap the hathizip cli."""
 
 import sys
 
@@ -6,7 +6,7 @@ from hathizip import cli
 
 
 def main():
-    """Main entry point."""
+    """Check if pytest arg is run else run main entry point."""
     if len(sys.argv) > 1 and sys.argv[1] == "--pytest":
         # pylint: disable=import-outside-toplevel
         import pytest  # type: ignore

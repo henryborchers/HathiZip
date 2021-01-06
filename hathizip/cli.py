@@ -1,4 +1,4 @@
-"""Simple interface for zipping from the commandline"""
+"""Simple interface for zipping from the commandline."""
 
 import argparse
 import os
@@ -85,7 +85,7 @@ def get_parser() -> argparse.ArgumentParser:
 
 
 def main():
-    """Main entry point for program."""
+    """Run main entry point for the program."""
     parser = get_parser()
     args = parser.parse_args()
 
