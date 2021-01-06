@@ -1,3 +1,5 @@
+"""Bootstrap the hathizip cli"""
+
 import sys
 
 from hathizip import cli

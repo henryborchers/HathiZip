@@ -1,3 +1,5 @@
+"""Tools for doing things to the files"""
+
 import zipfile
 import tempfile
 import os

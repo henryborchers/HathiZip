@@ -1,3 +1,5 @@
+"""Simple interface for zipping from the commandline"""
+
 import argparse
 import os
 import shutil
