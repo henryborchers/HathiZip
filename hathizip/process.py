@@ -1,3 +1,5 @@
+"""Tools for doing things to the files."""
+
 import zipfile
 import tempfile
 import os
@@ -11,7 +13,7 @@ PackageFile = namedtuple("PackageFile", ("absolute_path", "archive_path"))
 
 # TODO: create get_files testing
 def get_files(path) -> typing.Iterator[PackageFile]:
-    """Find files relative to a given path
+    """Find files relative to a given path.
 
     Args:
         path: Root to search for files
@@ -32,7 +34,7 @@ def get_files(path) -> typing.Iterator[PackageFile]:
 
 
 def compress_folder(path, dst):
-    """Compress the contents of a path
+    """Compress the contents of a path.
 
     Args:
         path: Root of the package
@@ -65,6 +67,14 @@ def compress_folder(path, dst):
 
 
 def compress_folder_inplace(path, dst):
+    """Compress the contents of a path without using a temp directory.
+
+    Args:
+        path: Root of the package
+        dst: Path where the zipped package should be saved
+
+
+    """
     logger = logging.getLogger(__name__)
     logger.debug("Taking care of {}".format(path))
 

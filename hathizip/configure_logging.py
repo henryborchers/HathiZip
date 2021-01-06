@@ -1,8 +1,22 @@
+"""Logging configurations."""
+
 import logging
 import sys
 
 
 def configure_logger(debug_mode=False, log_file=None) -> logging.Logger:
+    """Configure logger.
+
+    Useful for passing logging information
+
+    Args:
+        debug_mode:
+        log_file:
+
+    Returns:
+        configured logger
+
+    """
     logger = logging.getLogger(__package__)
     logger.setLevel(logging.DEBUG)
     debug_formatter = \

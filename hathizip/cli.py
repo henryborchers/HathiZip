@@ -1,3 +1,5 @@
+"""Simple interface for zipping from the commandline."""
+
 import argparse
 import os
 import shutil
@@ -12,6 +14,15 @@ except ImportError:
 
 
 def destination_path(path):
+    """Validate the entry point for the cli args.
+
+    Args:
+        path: input string data to validate
+
+    Returns:
+        Returns full file path when input path is valid
+
+    """
     if not os.path.exists(path):
         raise ValueError("{} is an invalid path".format(path))
 
@@ -22,6 +33,12 @@ def destination_path(path):
 
 
 def get_parser() -> argparse.ArgumentParser:
+    """Get cli argument parser.
+
+    Returns:
+        Argument parser
+
+    """
     parser = argparse.ArgumentParser(
         description="Creates .zip file packages for HathiTrust.")
 
@@ -68,6 +85,7 @@ def get_parser() -> argparse.ArgumentParser:
 
 
 def main():
+    """Run main entry point for the program."""
     parser = get_parser()
     args = parser.parse_args()
 
