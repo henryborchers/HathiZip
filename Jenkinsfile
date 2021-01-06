@@ -25,29 +25,54 @@ node(){
     checkout scm
     tox = load("ci/jenkins/scripts/tox.groovy")
 }
+SONARQUBE_CREDENTIAL_ID = "sonartoken-hathizip"
 
-node('linux && docker') {
-    timeout(2){
-        ws{
-            checkout scm
-            try{
-                docker.image('python:3.8').inside {
-                    stage("Getting Distribution Info"){
-                        sh(
-                           label: "Running setup.py with dist_info",
-                           script: """python --version
-                                      python setup.py dist_info
-                                   """
-                        )
-                        stash includes: "HathiZip.dist-info/**", name: 'DIST-INFO'
-                        archiveArtifacts artifacts: "HathiZip.dist-info/**"
+defaultParameterValues = [
+    USE_SONARQUBE: false
+]
+
+def startup(){
+    def SONARQUBE_CREDENTIAL_ID = SONARQUBE_CREDENTIAL_ID
+    parallel(
+        [
+            "Checking sonarqube Settings": {
+                node(){
+                    try{
+                        withCredentials([string(credentialsId: SONARQUBE_CREDENTIAL_ID, variable: 'dddd')]) {
+                            echo 'Found credentials for sonarqube'
+                        }
+                        defaultParameterValues.USE_SONARQUBE = true
+                    } catch(e){
+                        echo "Setting defaultValue for USE_SONARQUBE to false. Reason: ${e}"
+                        defaultParameterValues.USE_SONARQUBE = false
                     }
                 }
-            } finally{
-                deleteDir()
+            },
+            "Getting Distribution Info": {
+                node('linux && docker') {
+                    timeout(2){
+                        ws{
+                            checkout scm
+                            try{
+                                docker.image('python:3.8').inside {
+                                    sh(
+                                       label: "Running setup.py with dist_info",
+                                       script: """python --version
+                                                  python setup.py dist_info
+                                               """
+                                    )
+                                    stash includes: "HathiZip.dist-info/**", name: 'DIST-INFO'
+                                    archiveArtifacts artifacts: "HathiZip.dist-info/**"
+                                }
+                            } finally{
+                                deleteDir()
+                            }
+                        }
+                    }
+                }
             }
-        }
-    }
+        ]
+    )
 }
 
 def get_props(){
@@ -64,6 +89,7 @@ Name = ${metadata.Name}
     }
 }
 
+startup()
 def props = get_props()
 
 pipeline {
@@ -75,7 +101,7 @@ pipeline {
     }
     parameters {
         string(name: "PROJECT_NAME", defaultValue: "HathiTrust Zip for Submit", description: "Name given to the project")
-        booleanParam(name: 'USE_SONARQUBE', defaultValue: true, description: 'Send data test data to SonarQube')
+        booleanParam(name: 'USE_SONARQUBE', defaultValue: defaultParameterValues.USE_SONARQUBE, description: 'Send data test data to SonarQube')
         booleanParam(name: "TEST_RUN_TOX", defaultValue: false, description: "Run Tox Tests")
         booleanParam(name: "PACKAGE_CX_FREEZE", defaultValue: false, description: "Create a package with CX_Freeze")
         booleanParam(name: "DEPLOY_DEVPI", defaultValue: false, description: "Deploy to devpi on https://devpi.library.illinois.edu/DS_Jenkins/${env.BRANCH_NAME}")
@@ -83,7 +109,6 @@ pipeline {
         booleanParam(name: "DEPLOY_ADD_TAG", defaultValue: false, description: "Tag commit to current version")
         booleanParam(name: "DEPLOY_SCCM", defaultValue: false, description: "Deploy to SCCM")
         booleanParam(name: "UPDATE_DOCS", defaultValue: false, description: "Update online documentation")
-
     }
     stages {
         stage("Build"){
@@ -326,7 +351,7 @@ pipeline {
                                     ]
                                     def sonarqubeConfig = [
                                         installationName: 'sonarcloud',
-                                        credentialsId: 'sonartoken-hathizip',
+                                        credentialsId: SONARQUBE_CREDENTIAL_ID,
                                     ]
                                     def agent = [
                                             dockerfile: [
