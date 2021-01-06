@@ -67,6 +67,14 @@ def compress_folder(path, dst):
 
 
 def compress_folder_inplace(path, dst):
+    """Compress the contents of a path without using a temp directory.
+
+    Args:
+        path: Root of the package
+        dst: Path where the zipped package should be saved
+
+
+    """
     logger = logging.getLogger(__name__)
     logger.debug("Taking care of {}".format(path))
 
