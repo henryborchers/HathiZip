@@ -496,7 +496,6 @@ pipeline {
                 beforeOptions true
             }
             options{
-                timestamps()
                 lock("HathiZip-devpi")
             }
 
