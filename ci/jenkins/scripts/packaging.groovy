@@ -20,7 +20,7 @@ def getAgent(agent){
 }
 
 // TODO: Make get agent which returns a clousure
-def test_pkg(args = [:]){
+def testPkg(args = [:]){
 //     def agentRunner = getAgent(args.agent)
     def nodeLabel = getNodeLabel(args.agent)
 //     agentRunner{
@@ -41,13 +41,14 @@ def test_pkg(args = [:]){
 
                     def toxCommand = "tox --installpkg ${it.path} -e ${getToxEnv(args)}"
                     if(isUnix()){
-                        sh "tox --version"
+                        sh(label: "Testing tox version", script: "tox --version")
                         toxCommand = toxCommand + " --workdir /tmp/tox"
-                        sh toxCommand
+
+                        sh(label: "Running Tox", script: toxCommand)
                     } else{
-                        bat "tox --version"
+                        bat(label: "Testing tox version", script: "tox --version")
                         toxCommand = toxCommand + " --workdir %TEMP%\\tox"
-                        bat toxCommand
+                        bat(label: "Running Tox", script: toxCommand)
                     }
                 }
             }
@@ -55,4 +56,6 @@ def test_pkg(args = [:]){
     }
 }
 
-return this
+return [
+    testPkg: this.&testPkg
+]

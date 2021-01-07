@@ -525,7 +525,7 @@ pipeline {
                             parallel(
                                 [
                                     'Windows - Python 3.6: sdist': {
-                                        packages.test_pkg(
+                                        packages.testPkg(
                                             agent: [
                                                 dockerfile: [
                                                     label: 'windows && docker',
@@ -539,7 +539,7 @@ pipeline {
                                         )
                                     },
                                     'Windows - Python 3.7: sdist': {
-                                        packages.test_pkg(
+                                        packages.testPkg(
                                             agent: [
                                                 dockerfile: [
                                                     label: 'windows && docker',
@@ -553,7 +553,7 @@ pipeline {
                                         )
                                     },
                                     'Windows - Python 3.8: sdist': {
-                                        packages.test_pkg(
+                                        packages.testPkg(
                                             agent: [
                                                 dockerfile: [
                                                     label: 'windows && docker',
@@ -567,7 +567,7 @@ pipeline {
                                         )
                                     },
                                     'Windows - Python 3.9: sdist': {
-                                        packages.test_pkg(
+                                        packages.testPkg(
                                             agent: [
                                                 dockerfile: [
                                                     label: 'windows && docker',
@@ -581,7 +581,7 @@ pipeline {
                                         )
                                     },
                                     'Linux - Python 3.6: sdist': {
-                                        packages.test_pkg(
+                                        packages.testPkg(
                                             agent: [
                                                 dockerfile: [
                                                     label: 'linux && docker',
@@ -595,7 +595,7 @@ pipeline {
                                         )
                                     },
                                     'Linux - Python 3.7: sdist': {
-                                        packages.test_pkg(
+                                        packages.testPkg(
                                             agent: [
                                                 dockerfile: [
                                                     label: 'linux && docker',
@@ -609,7 +609,7 @@ pipeline {
                                         )
                                     },
                                     'Linux - Python 3.8: sdist': {
-                                        packages.test_pkg(
+                                        packages.testPkg(
                                             agent: [
                                                 dockerfile: [
                                                     label: 'linux && docker',
@@ -623,7 +623,7 @@ pipeline {
                                         )
                                     },
                                     'Linux - Python 3.9: sdist': {
-                                        packages.test_pkg(
+                                        packages.testPkg(
                                             agent: [
                                                 dockerfile: [
                                                     label: 'linux && docker',
@@ -637,7 +637,7 @@ pipeline {
                                         )
                                     },
                                     'Windows - Python 3.6: wheel': {
-                                        packages.test_pkg(
+                                        packages.testPkg(
                                             agent: [
                                                 dockerfile: [
                                                     label: 'windows && docker',
@@ -651,7 +651,7 @@ pipeline {
                                         )
                                     },
                                     'Windows - Python 3.7: wheel': {
-                                        packages.test_pkg(
+                                        packages.testPkg(
                                             agent: [
                                                 dockerfile: [
                                                     label: 'windows && docker',
@@ -665,7 +665,7 @@ pipeline {
                                         )
                                     },
                                     'Windows - Python 3.8: wheel': {
-                                        packages.test_pkg(
+                                        packages.testPkg(
                                             agent: [
                                                 dockerfile: [
                                                     label: 'windows && docker',
@@ -679,7 +679,7 @@ pipeline {
                                         )
                                     },
                                     'Windows - Python 3.9: wheel': {
-                                        packages.test_pkg(
+                                        packages.testPkg(
                                             agent: [
                                                 dockerfile: [
                                                     label: 'windows && docker',
@@ -693,7 +693,7 @@ pipeline {
                                         )
                                     },
                                     'Linux - Python 3.6: wheel': {
-                                        packages.test_pkg(
+                                        packages.testPkg(
                                             agent: [
                                                 dockerfile: [
                                                     label: 'linux && docker',
@@ -707,7 +707,7 @@ pipeline {
                                         )
                                     },
                                     'Linux - Python 3.7: wheel': {
-                                        packages.test_pkg(
+                                        packages.testPkg(
                                             agent: [
                                                 dockerfile: [
                                                     label: 'linux && docker',
@@ -721,7 +721,7 @@ pipeline {
                                         )
                                     },
                                     'Linux - Python 3.8: wheel': {
-                                        packages.test_pkg(
+                                        packages.testPkg(
                                             agent: [
                                                 dockerfile: [
                                                     label: 'linux && docker',
@@ -735,7 +735,7 @@ pipeline {
                                         )
                                     },
                                     'Linux - Python 3.9: wheel': {
-                                        packages.test_pkg(
+                                        packages.testPkg(
                                             agent: [
                                                 dockerfile: [
                                                     label: 'linux && docker',
