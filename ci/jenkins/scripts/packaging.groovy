@@ -15,27 +15,27 @@ def getToxEnv(args){
 }
 
 def getAgent(args){
-    def nodeLabel = getNodeLabel(args.agent)
-    return { inner ->
-        node(nodeLabel){
-            ws{
-                checkout scm
-                def dockerImage
-//                 def dockerImageName = "dummy"
-                def dockerImageName = "dummy_${getToxEnv(args)}"
-                echo "Getting docker build args"
-                def dockerBuildArg = "-f ${args.agent.dockerfile.filename} ${args.agent.dockerfile.additionalBuildArgs} ."
-        //         TODO: change the docker image name
-                echo "Running docker with the following args ${dockerBuildArg}"
-                lock("docker build-${env.NODE_NAME}"){
-                    dockerImage = docker.build(dockerImageName, dockerBuildArg)
-                }
-                dockerImage.inside{
-                    inner()
+    if (args.agent.ç("dockerfile")){
+        def nodeLabel = getNodeLabel(args.agent)
+        return { inner ->
+            node(nodeLabel){
+                ws{
+                    checkout scm
+                    def dockerImageName = "dummy_${getToxEnv(args)}"
+                    echo "Getting docker build args"
+            //         TODO: change the docker image name
+                    def dockerImage
+                    lock("docker build-${env.NODE_NAME}"){
+                        dockerImage = docker.build(dockerImageName, "-f ${args.agent.dockerfile.filename} ${args.agent.dockerfile.additionalBuildArgs} .")
+                    }
+                    dockerImage.inside{
+                        inner()
+                    }
                 }
             }
         }
     }
+    error('Invalid agent type, expect [dockerfile]')
 }
 
 def testPkg(args = [:]){
