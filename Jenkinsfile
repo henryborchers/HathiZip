@@ -532,14 +532,14 @@ pipeline {
                             }
                             parallel(
                                 [
-                                    'Mac - Python 3.8: sdist': {
+                                    'Mac - Python 3.9: sdist': {
                                         packages.testPkg(
                                             agent: [
                                                 label: 'mac',
                                             ],
                                             glob: 'dist/*.tar.gz,dist/*.zip',
                                             stash: 'dist',
-                                            pythonVersion: '3.8'
+                                            pythonVersion: '3.9'
                                         )
                                     },
                                     'Windows - Python 3.6: sdist': {
