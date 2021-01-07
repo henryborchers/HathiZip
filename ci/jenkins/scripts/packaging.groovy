@@ -32,21 +32,19 @@ def getAgent(args){
             node(nodeLabel){
                 ws{
                     checkout scm
-                    def dockerImageName = "dummy_${getToxEnv(args)}"
-                    echo "Getting docker build args"
-            //         TODO: change the docker image name
                     def dockerImage
+                    def dockerImageName = "${currentBuild.fullProjectName}_${getToxEnv(args)}".replaceAll("-", "_").replaceAll('/', "_").replaceAll(' ', "").toLowerCase()
                     lock("docker build-${env.NODE_NAME}"){
                         dockerImage = docker.build(dockerImageName, "-f ${args.agent.dockerfile.filename} ${args.agent.dockerfile.additionalBuildArgs} .")
                     }
-                    dockerImage.inside{
+                    dockerImage.inside('--rm'){
                         inner()
                     }
                 }
             }
         }
     }
-    error('Invalid agent type, expect [dockerfile]')
+    error('Invalid agent type, expect [dockerfile,label]')
 }
 
 def testPkg(args = [:]){
