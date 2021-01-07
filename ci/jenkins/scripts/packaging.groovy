@@ -63,7 +63,7 @@ def testPkg(args = [:]){
                 def toxCommand = "${tox} --installpkg ${it.path} -e ${getToxEnv(args)}"
                 if(isUnix()){
                     sh(label: "Testing tox version", script: "${tox} --version")
-                    toxCommand = toxCommand + " --workdir /tmp/tox"
+//                     toxCommand = toxCommand + " --workdir /tmp/tox"
                     sh(label: "Running Tox", script: toxCommand)
                 } else{
                     bat(label: "Testing tox version", script: "${tox} --version")
