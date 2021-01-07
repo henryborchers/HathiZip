@@ -35,6 +35,7 @@ def startup(){
     def SONARQUBE_CREDENTIAL_ID = SONARQUBE_CREDENTIAL_ID
     parallel(
         [
+            failFast: true,
             "Checking sonarqube Settings": {
                 node(){
                     try{
@@ -112,15 +113,10 @@ pipeline {
         booleanParam(name: "UPDATE_DOCS", defaultValue: false, description: "Update online documentation")
     }
     stages {
-        stage("Mac") {
-            agent{
-                label "apple"
-            }
-            steps{
-                echo "HERER"
-            }
-        }
         stage("Build"){
+            when{
+                equals expected: true, actual: false
+            }
             agent {
                 dockerfile {
                     filename DEFAULT_AGENT.filename
@@ -192,6 +188,9 @@ pipeline {
             }
         }
         stage("Tests") {
+            when{
+                equals expected: true, actual: false
+            }
             stages{
                 stage("Code Quality"){
                     stages{
@@ -431,7 +430,7 @@ pipeline {
                                     "Windows":{
                                         windowsJobs = tox.getToxTestsParallel(
                                                 envNamePrefix: "Tox Windows",
-                                                label: "windows && docker",
+                                                label: 'windows && docker',
                                                 dockerfile: "ci/docker/python/windows/tox/Dockerfile",
                                                 dockerArgs: '--build-arg PIP_EXTRA_INDEX_URL --build-arg PIP_INDEX_URL --build-arg CHOCOLATEY_SOURCE'
                                             )
@@ -445,6 +444,7 @@ pipeline {
                 }
             }
         }
+
         stage("Packaging") {
             stages{
                 stage("Create"){
