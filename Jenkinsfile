@@ -539,7 +539,16 @@ pipeline {
                                             ],
                                             glob: 'dist/*.tar.gz,dist/*.zip',
                                             stash: 'dist',
-                                            pythonVersion: '3.9'
+                                            pythonVersion: '3.9',
+                                            testSetup: {
+                                                checkout scm
+                                                unstash 'dist'
+                                                sh 'python3 -m venv venv'
+                                            },
+                                            testTeardown: {
+                                                sh "rm -r venv/"
+                                            }
+
                                         )
                                     },
                                     'Windows - Python 3.6: sdist': {
