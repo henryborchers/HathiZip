@@ -540,6 +540,7 @@ pipeline {
                                             glob: 'dist/*.tar.gz,dist/*.zip',
                                             stash: 'dist',
                                             pythonVersion: '3.9',
+                                            toxExec: "venv/bin/tox",
                                             testSetup: {
                                                 checkout scm
                                                 unstash 'dist'
