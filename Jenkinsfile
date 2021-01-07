@@ -112,6 +112,14 @@ pipeline {
         booleanParam(name: "UPDATE_DOCS", defaultValue: false, description: "Update online documentation")
     }
     stages {
+        stage("Mac") {
+            agent{
+                label "apple"
+            }
+            steps{
+                echo "HERER"
+            }
+        }
         stage("Build"){
             agent {
                 dockerfile {
@@ -524,6 +532,16 @@ pipeline {
                             }
                             parallel(
                                 [
+                                    'Mac - Python 3.8: sdist': {
+                                        packages.testPkg(
+                                            agent: [
+                                                label: 'mac',
+                                            ],
+                                            glob: 'dist/*.tar.gz,dist/*.zip',
+                                            stash: 'dist',
+                                            pythonVersion: '3.8'
+                                        )
+                                    },
                                     'Windows - Python 3.6: sdist': {
                                         packages.testPkg(
                                             agent: [
