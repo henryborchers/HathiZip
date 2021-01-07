@@ -543,7 +543,13 @@ pipeline {
                                             testSetup: {
                                                 checkout scm
                                                 unstash 'dist'
-                                                sh 'python3 -m venv venv'
+                                                sh(
+                                                    label:'Install Tox',
+                                                    script: '''python3 -m venv venv
+                                                               venv/bin/pip install pip --upgrade
+                                                               venv/bin/pip install tox
+                                                               '''
+                                                )
                                             },
                                             testTeardown: {
                                                 sh "rm -r venv/"
