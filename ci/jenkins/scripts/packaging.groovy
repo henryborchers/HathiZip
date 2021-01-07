@@ -7,12 +7,11 @@ def getNodeLabel(agent){
 }
 def getToxEnv(args){
     try{
-        def pythonVersion = args.pythonVersion
+        def pythonVersion = args.pythonVersion.replace(".", "")
+        return "py${pythonVersion}"
     } catch(e){
         return "py"
     }
-// TODO: convert something like 3.6 into py36
-    return "py"
 }
 
 // TODO: Make get agent which returns a clousure
