@@ -15,6 +15,17 @@ def getToxEnv(args){
 }
 
 def getAgent(args){
+    if (args.agent.containsKey("label")){
+        return { inner ->
+            node(args.agent.label){
+                ws{
+                    inner()
+                }
+            }
+        }
+
+    }
+
     if (args.agent.containsKey("dockerfile")){
         def nodeLabel = getNodeLabel(args.agent)
         return { inner ->
