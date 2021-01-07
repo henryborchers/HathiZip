@@ -114,9 +114,6 @@ pipeline {
     }
     stages {
         stage("Build"){
-            when{
-                equals expected: true, actual: false
-            }
             agent {
                 dockerfile {
                     filename DEFAULT_AGENT.filename
@@ -188,9 +185,6 @@ pipeline {
             }
         }
         stage("Tests") {
-            when{
-                equals expected: true, actual: false
-            }
             stages{
                 stage("Code Quality"){
                     stages{
